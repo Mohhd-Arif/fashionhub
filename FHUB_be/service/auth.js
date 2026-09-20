@@ -51,12 +51,25 @@ function requireAdmin(req, res, next) {
   if (req.user?.usertype !== 'admin') throw new ApiError(403, 'Administrator access is required.');
   next();
 }
+function normalizeOrigin(value) {
+  try {
+    const url = new URL(value);
+    return `${url.protocol}//${url.host}`.toLowerCase();
+  } catch {
+    return '';
+  }
+}
 function protectWrites(req, res, next) {
   if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next();
   // Custom headers cannot be sent by cross-origin forms; no cross-origin CORS is enabled.
   if (req.get('X-Requested-With') !== 'FashionHub') throw new ApiError(403, 'Missing request protection header.');
-  const allowed = (process.env.APP_ORIGINS || 'http://localhost:5173,http://127.0.0.1:5173,http://localhost:8000,http://127.0.0.1:8000').split(',').map(s => s.trim());
-  if (req.get('Origin') && !allowed.includes(req.get('Origin'))) throw new ApiError(403, 'This request origin is not allowed.');
+  const origin = normalizeOrigin(req.get('Origin'));
+  if (origin) {
+    const allowed = new Set((process.env.APP_ORIGINS || 'http://localhost:5173,http://127.0.0.1:5173,http://localhost:8000,http://127.0.0.1:8000').split(',').map(normalizeOrigin).filter(Boolean));
+    const originHost = new URL(origin).host;
+    const requestHost = (req.get('X-Forwarded-Host') || req.get('Host') || '').split(',')[0].trim().toLowerCase();
+    if (!allowed.has(origin) && originHost !== requestHost) throw new ApiError(403, 'This request origin is not allowed.');
+  }
   next();
 }
 module.exports = { hashPassword, verifyPassword, publicUser, createSession, logout, requireUser, requireAdmin, protectWrites };

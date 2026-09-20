@@ -7,8 +7,8 @@
     "FHUB_ui"
   ],
   "scripts": {
-    "render:build": "npm ci && npm run build --workspace fashion-hub",
-    "build": "npm run build --workspace fashion-hub",
+    "render:build": "npm ci && npm run frontend:build --workspace fhub_be",
+    "build": "npm run frontend:build --workspace fhub_be",
     "start": "npm start --workspace fhub_be",
     "test": "npm test --workspace fhub_be && npm test --workspace fashion-hub"
   },

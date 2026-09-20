@@ -8,7 +8,8 @@
     "start": "node index.js",
     "db:check": "node scripts/check-db.js",
     "admin:create": "node scripts/create-admin.js",
-    "render:build": "npm ci && npm ci --prefix ../FHUB_ui && npm run build --prefix ../FHUB_ui"
+    "render:build": "npm ci && npm run frontend:build",
+    "frontend:build": "node scripts/build-frontend.js"
   },
   "author": "",
   "license": "ISC",

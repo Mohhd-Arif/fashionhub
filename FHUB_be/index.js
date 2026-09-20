@@ -7,7 +7,12 @@ const { protectWrites } = require('./service/auth');
 const { ensureIndexes } = require('./config/indexes');
 const { retryImageCleanup } = require('./service/images');
 const server = express();
-const frontendDist = path.resolve(__dirname, './dist');
+const frontendCandidates = [
+  process.env.FRONTEND_DIST && path.resolve(process.env.FRONTEND_DIST),
+  path.resolve(__dirname, './dist'),
+  path.resolve(__dirname, '../FHUB_ui/dist')
+].filter(Boolean);
+const frontendDist = frontendCandidates.find(candidate => fs.existsSync(path.join(candidate, 'index.html'))) || frontendCandidates[0];
 const frontendIndex = path.join(frontendDist, 'index.html');
 
 server.disable('x-powered-by');
