@@ -1,0 +1,22 @@
+module.exports = {
+  version: 1,
+  storeName: 'Fashion Hub',
+  announcement: 'New season. Fresh favourites. Discover your everyday style.',
+  collectionHeading: 'A little something for everyone.',
+  collectionDescription: 'Small adventures, everyday plans and special moments. Find a fit for all of them.',
+  catalogueHeading: 'Your next favourite starts here.',
+  catalogueDescription: 'Thoughtfully chosen styles, straight from our store.',
+  storyHeading: 'Big on style. Closer to home.',
+  storyDescription: 'Finding clothes you love should feel as good as wearing them. Explore everyday essentials for kids, gents and ladies, with a friendly neighbourhood touch.',
+  storyImage: { type: 'asset', url: '/images/photo-1441986300917-64674bd600d8.jpg' },
+  showStory: true,
+  contactHeading: 'Come say hello.',
+  contactDescription: 'Found something you love? Get in touch to check your fit or visit our store.',
+  address: '', phone: '', hours: '',
+  footerTagline: 'Everyday style. Extraordinary you.',
+  slides: [
+    { id: 'kids', label: 'Kids', eyebrow: 'LITTLE PEOPLE. BIG PERSONALITY.', title: 'Made for little adventures.', description: 'Easy fits for playtime, soft essentials for downtime, and cheerful styles for every growing day.', badge: 'THE LITTLE EXPLORERS EDIT', message: 'Big comfort for little moments.', buttonLabel: 'Explore kids', image: { type: 'asset', url: '/images/kids-collection.jpg' }, articleId: '' },
+    { id: 'gents', label: 'Gents', eyebrow: 'EVERYDAY, ELEVATED.', title: 'Good style. Zero effort.', description: 'From your first meeting to your weekend plans. Find easy layers, reliable essentials and fits that move with you.', badge: 'THE EVERYDAY ESSENTIALS EDIT', message: 'Your wardrobe, refreshed.', buttonLabel: 'Explore gents', image: { type: 'asset', url: '/images/photo-1516257984-b1b4d707412e.jpg' }, articleId: '' },
+    { id: 'ladies', label: 'Ladies', eyebrow: 'YOUR STYLE. YOUR RULES.', title: 'A little more extraordinary.', description: 'Feel-good fabrics and fresh silhouettes for wherever the day takes you. Discover pieces that feel like you.', badge: 'THE FEEL-GOOD EDIT', message: 'Fresh fits. Endless possibilities.', buttonLabel: 'Explore ladies', image: { type: 'asset', url: '/images/photo-1539109136881-3be0616acf4b.jpg' }, articleId: '' },
+  ],
+};

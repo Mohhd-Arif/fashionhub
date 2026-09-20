@@ -1,0 +1,28 @@
+{
+  "name": "fhub_be",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "node --test tests/api.test.js",
+    "dev": "nodemon index.js",
+    "start": "node index.js",
+    "db:check": "node scripts/check-db.js",
+    "admin:create": "node scripts/create-admin.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "dotenv": "^18.0.1",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.7.0",
+    "helmet": "^8.3.0",
+    "mongodb": "^6.21.0",
+    "multer": "^2.4.0",
+    "nodemon": "^3.1.14",
+    "sharp": "^0.35.4"
+  },
+  "devDependencies": {
+    "supertest": "^7.2.2"
+  }
+}
