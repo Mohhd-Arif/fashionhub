@@ -1,10 +1,14 @@
 const express = require('express');
+const fs = require('fs');
+const path = require('path');
 const { connectDatabase, getDatabase, closeDatabase, connectionErrorMessage } = require('./config/database');
 const helmet = require('helmet');
 const { protectWrites } = require('./service/auth');
 const { ensureIndexes } = require('./config/indexes');
 const { retryImageCleanup } = require('./service/images');
 const server = express();
+const frontendDist = path.resolve(__dirname, '../FHUB_ui/dist');
+const frontendIndex = path.join(frontendDist, 'index.html');
 
 server.disable('x-powered-by');
 server.use(helmet({ crossOriginResourcePolicy: { policy: 'same-site' } }));
@@ -26,6 +30,20 @@ server.get('/health', async (req, res) => {
     res.status(503).json({ status: 'unavailable', database: 'disconnected' });
   }
 });
+
+if (fs.existsSync(frontendIndex)) {
+  server.use(express.static(frontendDist, {
+    index: false,
+    maxAge: process.env.NODE_ENV === 'production' ? '1y' : 0,
+    setHeaders: (res, filePath) => {
+      if (filePath.endsWith('.html')) res.setHeader('Cache-Control', 'no-store');
+    }
+  }));
+  server.get(/^\/(?!api(?:\/|$)|health$|test$).*/, (req, res) => {
+    res.set('Cache-Control', 'no-store');
+    res.sendFile(frontendIndex);
+  });
+}
 
 let listener;
 let shuttingDown = false;

@@ -111,7 +111,26 @@ Editable content includes store name, announcement, collection/catalogue introdu
 
 All saves require the current integer version. A stale version returns 409 instead of overwriting another admin's work. Replaced files are removed after a successful update. Initial unsaved settings use the bundled default photos; admins can replace them with their own photographs or AI-generated images.
 
-## Deployment and tests
+## Render deployment and tests
+
+For Render, deploy the repository root as one **Web Service**. The root `package.json` installs both apps, builds React into `FHUB_ui/dist`, then starts the Express server.
+
+Render settings:
+
+```sh
+Build Command: npm run render:build
+Start Command: npm start
+```
+
+Required environment variables on Render:
+
+```sh
+MONGODB_URI=your MongoDB Atlas connection string
+NODE_ENV=production
+APP_ORIGINS=https://your-render-service.onrender.com
+```
+
+`PORT` is supplied by Render automatically, so do not hard-code it there. After `FHUB_ui/dist/index.html` exists, the backend serves the frontend build directly. `/api/*`, `/health` and `/test` stay backend routes; every other path such as `/`, `/login` and `/admin` returns the React app so refresh/deep links work.
 
 The browser uses HttpOnly SameSite=Strict session cookies; production cookies also require HTTPS (`NODE_ENV=production`). Configure `APP_ORIGINS` to your exact frontend origin. No permissive cross-origin access is enabled. Serve the frontend and `/api` under one HTTPS origin using a reverse proxy. Vite proxies `/api` to port 8000 in development. For multiple backend instances, replace the default in-memory login limiter with a shared store and configure trusted proxy handling for your actual infrastructure.
 

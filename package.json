@@ -1,0 +1,13 @@
+{
+  "name": "fashionhub",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "render:build": "npm ci --prefix FHUB_be && npm ci --prefix FHUB_ui && npm run build --prefix FHUB_ui",
+    "start": "npm start --prefix FHUB_be",
+    "test": "npm test --prefix FHUB_be && npm test --prefix FHUB_ui"
+  },
+  "engines": {
+    "node": "20.x"
+  }
+}
