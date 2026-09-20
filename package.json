@@ -2,10 +2,15 @@
   "name": "fashionhub",
   "version": "1.0.0",
   "private": true,
+  "workspaces": [
+    "FHUB_be",
+    "FHUB_ui"
+  ],
   "scripts": {
-    "render:build": "npm ci --prefix FHUB_be && npm ci --prefix FHUB_ui && npm run build --prefix FHUB_ui",
-    "start": "npm start --prefix FHUB_be",
-    "test": "npm test --prefix FHUB_be && npm test --prefix FHUB_ui"
+    "render:build": "npm ci && npm run build --workspace fashion-hub",
+    "build": "npm run build --workspace fashion-hub",
+    "start": "npm start --workspace fhub_be",
+    "test": "npm test --workspace fhub_be && npm test --workspace fashion-hub"
   },
   "engines": {
     "node": "20.x"
