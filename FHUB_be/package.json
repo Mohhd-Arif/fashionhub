@@ -7,7 +7,8 @@
     "dev": "nodemon index.js",
     "start": "node index.js",
     "db:check": "node scripts/check-db.js",
-    "admin:create": "node scripts/create-admin.js"
+    "admin:create": "node scripts/create-admin.js",
+    "render:build": "npm ci && npm ci --prefix ../FHUB_ui && npm run build --prefix ../FHUB_ui"
   },
   "author": "",
   "license": "ISC",

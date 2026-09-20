@@ -7,7 +7,9 @@ const { protectWrites } = require('./service/auth');
 const { ensureIndexes } = require('./config/indexes');
 const { retryImageCleanup } = require('./service/images');
 const server = express();
-const frontendDist = path.resolve(__dirname, '../FHUB_ui/dist');
+const frontendDist = process.env.FRONTEND_DIST
+  ? path.resolve(process.env.FRONTEND_DIST)
+  : path.resolve(__dirname, '../FHUB_ui/dist');
 const frontendIndex = path.join(frontendDist, 'index.html');
 
 server.disable('x-powered-by');
@@ -32,6 +34,7 @@ server.get('/health', async (req, res) => {
 });
 
 if (fs.existsSync(frontendIndex)) {
+  console.log(`Serving frontend build from ${frontendDist}`);
   server.use(express.static(frontendDist, {
     index: false,
     maxAge: process.env.NODE_ENV === 'production' ? '1y' : 0,
@@ -43,6 +46,8 @@ if (fs.existsSync(frontendIndex)) {
     res.set('Cache-Control', 'no-store');
     res.sendFile(frontendIndex);
   });
+} else {
+  console.warn(`Frontend build not found at ${frontendIndex}. Build FHUB_ui before starting the server.`);
 }
 
 let listener;
