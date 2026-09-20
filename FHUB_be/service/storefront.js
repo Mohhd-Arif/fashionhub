@@ -18,6 +18,10 @@ function image(value, previous) {
   if (value?.type === 'asset' && previous?.type === 'asset' && value.url === previous.url) return previous;
   return retainedImages([value], previous ? [previous] : [])[0];
 }
+function focus(value, fallback = 'center center') {
+  const allowed = new Set(['left top', 'center top', 'right top', 'left center', 'center center', 'right center', 'left bottom', 'center bottom', 'right bottom']);
+  return allowed.has(value) ? value : fallback;
+}
 async function validateStorefront(body, previous) {
   if (!body || typeof body !== 'object') fail('Storefront settings are required.');
   const result = {};
@@ -29,6 +33,7 @@ async function validateStorefront(body, previous) {
   if (typeof body.showStory !== 'boolean') fail('showStory must be a boolean.');
   result.showStory = body.showStory;
   result.storyImage = image(body.storyImage, previous.storyImage);
+  result.storyFocus = focus(body.storyFocus, previous.storyFocus);
   if (!Array.isArray(body.slides) || body.slides.length !== 3) fail('Keep one slide for kids, gents and ladies.');
   result.slides = [];
   for (const id of ['kids', 'gents', 'ladies']) {
@@ -38,6 +43,7 @@ async function validateStorefront(body, previous) {
     for (const key of ['label', 'eyebrow', 'title', 'badge', 'message', 'buttonLabel']) item[key] = text(slide[key], `${id} ${key}`, key === 'title' ? 100 : 120);
     item.description = text(slide.description, `${id} description`, 800);
     item.image = image(slide.image, old.image);
+    item.imageFocus = focus(slide.imageFocus, old.imageFocus);
     item.articleId = text(slide.articleId, 'Featured article ID', 24, true);
     if (item.articleId) {
       const linked = await getDatabase().collection('articles').findOne({ _id: objectId(item.articleId) });
