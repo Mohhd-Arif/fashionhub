@@ -65,7 +65,7 @@ function protectWrites(req, res, next) {
   if (req.get('X-Requested-With') !== 'FashionHub') throw new ApiError(403, 'Missing request protection header.');
   const origin = normalizeOrigin(req.get('Origin'));
   if (origin) {
-    const allowed = new Set((process.env.APP_ORIGINS || 'http://localhost:5173,http://127.0.0.1:5173,http://localhost:8000,http://127.0.0.1:8000').split(',').map(normalizeOrigin).filter(Boolean));
+    const allowed = new Set((process.env.APP_ORIGINS || 'http://localhost:5173,http://127.0.0.1:5173,http://localhost:8000,http://127.0.0.1:8000').split(',').map().filter(Boolean));
     const originHost = new URL(origin).host;
     const requestHost = (req.get('X-Forwarded-Host') || req.get('Host') || '').split(',')[0].trim().toLowerCase();
     if (!allowed.has(origin) && originHost !== requestHost) throw new ApiError(403, 'This request origin is not allowed.');
