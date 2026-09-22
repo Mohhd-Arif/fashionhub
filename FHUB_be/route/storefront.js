@@ -36,7 +36,7 @@ router.patch('/', upload, async (req, res) => {
     }
     const before = [previous.storyImage, ...previous.slides.map(s => s.image)];
     const after = [settings.storyImage, ...settings.slides.map(s => s.image)];
-    await removeImages(before.filter(i => i.type === 'gridfs' && !after.some(j => j.type === 'gridfs' && j.fileId.equals(i.fileId))));
+    await removeImages(before.filter(i => i.type === 'gridfs' && !after.some(j => j.type === 'gridfs' && (j.fileId?.toString() === i.fileId?.toString()))));
     res.json({ storefront: present(update) });
   } catch (error) {
     // Only clean up files that are not referenced by a committed update.

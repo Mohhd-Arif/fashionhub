@@ -5,7 +5,7 @@ const { getDatabase } = require('../config/database');
 const { requireUser, requireAdmin } = require('../service/auth');
 const { ApiError, articleInput, objectId, version, fail } = require('../service/validation');
 const images = require('../service/images');
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024, files: 6, fields: 1, fieldSize: 32 * 1024, parts: 7 } }).array('images', 6);
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024, files: 6, fields: 10, fieldSize: 512 * 1024, parts: 20 } }).array('images', 6);
 const collection = () => getDatabase().collection('articles');
 function serialize(article) {
   return { id: article._id.toString(), name: article.name, quantity: article.quantity, size: article.size,
@@ -77,7 +77,7 @@ router.patch('/:id', upload, async (req, res) => {
     updated = await collection().findOneAndUpdate({ _id, version: expectedVersion }, { $set: { ...fields, images: [...retained, ...saved], updatedAt: new Date() }, $inc: { version: 1 } }, { returnDocument: 'after' });
     if (!updated) throw new ApiError(409, 'This article changed elsewhere. Refresh and try again.');
   } catch (error) { await images.removeImages(saved); throw error; }
-  await images.removeImages(previous.images.filter(i => i.type === 'gridfs' && !retained.some(r => r.type === 'gridfs' && r.fileId.equals(i.fileId))));
+  await images.removeImages(previous.images.filter(i => i.type === 'gridfs' && !retained.some(r => r.type === 'gridfs' && (r.fileId?.toString() === i.fileId?.toString()))));
   res.json({ article: serialize(updated) });
 });
 router.delete('/:id', async (req, res) => {

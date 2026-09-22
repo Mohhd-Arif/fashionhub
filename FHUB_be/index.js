@@ -16,7 +16,15 @@ const frontendDist = frontendCandidates.find(candidate => fs.existsSync(path.joi
 const frontendIndex = path.join(frontendDist, 'index.html');
 
 server.disable('x-powered-by');
-server.use(helmet({ crossOriginResourcePolicy: { policy: 'same-site' } }));
+server.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+      'img-src': ["'self'", 'data:', 'blob:', 'https:']
+    }
+  },
+  crossOriginResourcePolicy: { policy: 'cross-origin' }
+}));
 server.use(express.json({ limit: '100kb' }));
 server.use('/api', (req, res, next) => { res.set('Cache-Control', 'no-store'); next(); }, protectWrites);
 server.use('/api/auth', require('./route/auth'));

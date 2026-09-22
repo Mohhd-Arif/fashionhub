@@ -17,9 +17,10 @@ function password(value) {
   return value;
 }
 function decimal(value, field, maximum) {
-  if (!['string', 'number'].includes(typeof value) || !/^\d{1,9}(\.\d{1,2})?$/.test(String(value))) fail(`${field} must be a non-negative number with at most 2 decimal places.`);
-  if (Number(value) > maximum) fail(`${field} cannot exceed ${maximum}.`);
-  return Number(value).toFixed(2);
+  const str = String(value ?? '').trim();
+  if (!['string', 'number'].includes(typeof value) || !/^\d{1,9}(\.\d{1,2})?$/.test(str)) fail(`${field} must be a non-negative number with at most 2 decimal places.`);
+  if (Number(str) > maximum) fail(`${field} cannot exceed ${maximum}.`);
+  return Number(str).toFixed(2);
 }
 function articleInput(body) {
   if (!body || typeof body !== 'object' || Array.isArray(body)) fail('Article data is required.');
@@ -33,9 +34,10 @@ function articleInput(body) {
   if (!['male', 'female'].includes(body.gender)) fail('Gender must be male or female.');
   const category = body.category || (body.gender === 'male' ? 'gents' : 'ladies');
   if (!['kids', 'gents', 'ladies'].includes(category)) fail('Collection must be kids, gents or ladies.');
+  const discountVal = (body.discount === '' || body.discount === null || body.discount === undefined) ? 0 : body.discount;
   return { name, nameKey: name.toLowerCase(), quantity: body.quantity, size, gender: body.gender, category,
     price: Decimal128.fromString(decimal(body.price, 'Price', 9999999.99)),
-    discount: Decimal128.fromString(decimal(body.discount ?? 0, 'Discount', 100)) };
+    discount: Decimal128.fromString(decimal(discountVal, 'Discount', 100)) };
 }
 function imageUrl(value) {
   if (typeof value !== 'string' || value.length > 2048) fail('Image URL must be an HTTPS URL under 2048 characters.');
