@@ -16,6 +16,7 @@ module.exports = {
   contactDescription: 'Found something you love? Get in touch to check your fit or visit our store.',
   address: '', phone: '', hours: '',
   footerTagline: 'Everyday style. Extraordinary you.',
+  featuredArticleIds: [],
   slides: [
     { id: 'kids', label: 'Kids', eyebrow: 'LITTLE PEOPLE. BIG PERSONALITY.', title: 'Made for little adventures.', description: 'Easy fits for playtime, soft essentials for downtime, and cheerful styles for every growing day.', badge: 'THE LITTLE EXPLORERS EDIT', message: 'Big comfort for little moments.', buttonLabel: 'Explore kids', image: { type: 'asset', url: '/images/kids-collection.jpg' }, imageFocus: '50% 50%', imageCrop: { x: 0, y: 0, width: 100, height: 100 }, articleId: '' },
     { id: 'gents', label: 'Gents', eyebrow: 'EVERYDAY, ELEVATED.', title: 'Good style. Zero effort.', description: 'From your first meeting to your weekend plans. Find easy layers, reliable essentials and fits that move with you.', badge: 'THE EVERYDAY ESSENTIALS EDIT', message: 'Your wardrobe, refreshed.', buttonLabel: 'Explore gents', image: { type: 'asset', url: '/images/photo-1516257984-b1b4d707412e.jpg' }, imageFocus: '50% 50%', imageCrop: { x: 0, y: 0, width: 100, height: 100 }, articleId: '' },

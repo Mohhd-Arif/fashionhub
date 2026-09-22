@@ -29,6 +29,15 @@ function focus(value, fallback = '50% 50%') {
   return `${x.toFixed(1)}% ${y.toFixed(1)}%`;
 }
 
+function articleIds(value, fallback = []) {
+  const list = Array.isArray(value) ? value : Array.isArray(fallback) ? fallback : [];
+  const unique = [];
+  for (const id of list) {
+    if (typeof id === 'string' && id && !unique.includes(id)) unique.push(id);
+    if (unique.length >= 6) break;
+  }
+  return unique;
+}
 function crop(value, fallback = { x: 0, y: 0, width: 100, height: 100 }) {
   const base = fallback && typeof fallback === 'object' ? fallback : { x: 0, y: 0, width: 100, height: 100 };
   if (!value || typeof value !== 'object') return base;
@@ -50,6 +59,10 @@ async function validateStorefront(body, previous) {
   if (result.phone && !/^\+?[\d\s()-]{7,25}$/.test(result.phone)) fail('Enter a valid phone number.');
   if (typeof body.showStory !== 'boolean') fail('showStory must be a boolean.');
   result.showStory = body.showStory;
+  result.featuredArticleIds = articleIds(body.featuredArticleIds, previous.featuredArticleIds);
+  for (const id of result.featuredArticleIds) {
+    if (!await getDatabase().collection('articles').findOne({ _id: objectId(id) })) fail('Choose existing top articles.');
+  }
   result.storyImage = image(body.storyImage, previous.storyImage);
   result.storyFocus = focus(body.storyFocus, previous.storyFocus);
   result.storyCrop = crop(body.storyCrop, previous.storyCrop);

@@ -6,8 +6,18 @@ const { ApiError, objectId, fail } = require('../service/validation');
 
 router.get('/storefront', async (req, res) => {
   const storefront = present(await getStorefront());
-  const ids = storefront.slides.filter(s => s.articleId).map(s => objectId(s.articleId));
-  const featured = ids.length ? await getDatabase().collection('articles').find({ _id: { $in: ids } }).toArray() : [];
+  const selectedIds = [...new Set(storefront.featuredArticleIds || [])].slice(0, 6);
+  let featured = [];
+  if (selectedIds.length) {
+    const ids = selectedIds.map(id => objectId(id));
+    const items = await getDatabase().collection('articles').find({ _id: { $in: ids } }).toArray();
+    featured = selectedIds.map(id => items.find(item => item._id.toString() === id)).filter(Boolean);
+  }
+  if (featured.length < 6) {
+    const used = new Set(featured.map(item => item._id.toString()));
+    const more = await getDatabase().collection('articles').find(used.size ? { _id: { $nin: [...used].map(objectId) } } : {}).sort({ createdAt: -1, _id: -1 }).limit(6 - featured.length).toArray();
+    featured.push(...more);
+  }
   res.json({ storefront, featured: featured.map(serialize) });
 });
 router.get('/articles', async (req, res) => {
