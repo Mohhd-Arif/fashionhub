@@ -1,5 +1,6 @@
 const express = require('express');
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const { connectDatabase, getDatabase, closeDatabase, connectionErrorMessage } = require('./config/database');
 const helmet = require('helmet');
@@ -20,7 +21,8 @@ server.use(helmet({
   contentSecurityPolicy: {
     directives: {
       ...helmet.contentSecurityPolicy.getDefaultDirectives(),
-      'img-src': ["'self'", 'data:', 'blob:', 'https:']
+      'img-src': ["'self'", 'data:', 'blob:', 'https:'],
+      'upgrade-insecure-requests': process.env.FORCE_HTTPS === 'true' ? [] : null
     }
   },
   crossOriginResourcePolicy: { policy: 'cross-origin' }
@@ -76,8 +78,21 @@ async function shutdown() {
   clearTimeout(timeout);
 }
 
+function getNetworkAddress() {
+  const nets = os.networkInterfaces();
+  for (const name of Object.keys(nets)) {
+    for (const net of nets[name]) {
+      if (net.family === 'IPv4' && !net.internal) {
+        return net.address;
+      }
+    }
+  }
+  return null;
+}
+
 async function start() {
   const port = Number(process.env.PORT || 8000);
+  const host = process.env.HOST || '0.0.0.0';
   if (!Number.isInteger(port) || port < 1 || port > 65535) {
     console.error('PORT must be an integer between 1 and 65535.');
     process.exitCode = 1;
@@ -91,7 +106,12 @@ async function start() {
     cleanupTimer = setInterval(cleanup, 60000);
     cleanupTimer.unref();
     console.log('MongoDB connected successfully.');
-    listener = server.listen(port, () => console.log(`Server listening on port ${port}`));
+    listener = server.listen(port, host, () => {
+      const network = getNetworkAddress();
+      console.log(`Server listening on port ${port}:`);
+      console.log(`  > Local:   http://localhost:${port}`);
+      if (network) console.log(`  > Network: http://${network}:${port}`);
+    });
     listener.on('error', async error => {
       console.error(error.code === 'EADDRINUSE' ? `Port ${port} is already in use.` : 'HTTP server failed to start.');
       await closeDatabase();
@@ -113,7 +133,7 @@ server.use((error, req, res, next) => {
   if (error.type === 'entity.parse.failed') return res.status(400).json({ error: 'Request body must contain valid JSON.' });
   if (error.type === 'entity.too.large') return res.status(413).json({ error: 'Request is too large.' });
   if (error.status && error.status < 500) return res.status(error.status).json({ error: error.message });
-  console.error('API request failed:', error.name || 'Error');
+  console.error('API request failed:', error);
   res.status(500).json({ error: 'Something went wrong. Please try again.' });
 });
 

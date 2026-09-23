@@ -11,7 +11,8 @@ function serialize(article) {
   return { id: article._id.toString(), name: article.name, quantity: article.quantity, size: article.size,
     price: article.price.toString(), discount: article.discount.toString(), gender: article.gender, category: article.category || (article.gender === 'male' ? 'gents' : 'ladies'), version: article.version,
     images: (article.images || []).map(image => image.type === 'gridfs' ? { type: 'gridfs', fileId: image.fileId.toString(), url: `/api/images/${image.fileId}` } : image),
-    createdAt: article.createdAt, updatedAt: article.updatedAt };
+    createdAt: article.createdAt, updatedAt: article.updatedAt,
+    isDeleted: Boolean(article.isDeleted), deletedAt: article.deletedAt || null };
 }
 function input(req) {
   if (req.is('multipart/form-data')) {
@@ -21,15 +22,49 @@ function input(req) {
 }
 router.use(requireUser, requireAdmin);
 router.get('/summary', async (req, res) => {
-  const [summary] = await collection().aggregate([{ $group: { _id: null, articles: { $sum: 1 }, units: { $sum: '$quantity' },
-    lowStock: { $sum: { $cond: [{ $and: [{ $gt: ['$quantity', 0] }, { $lte: ['$quantity', 5] }] }, 1, 0] } },
-    outOfStock: { $sum: { $cond: [{ $eq: ['$quantity', 0] }, 1, 0] } } } }]).toArray();
-  res.json({ summary: summary ? { articles: summary.articles, units: summary.units, lowStock: summary.lowStock, outOfStock: summary.outOfStock } : { articles: 0, units: 0, lowStock: 0, outOfStock: 0 } });
+  const [summary] = await collection().aggregate([
+    {
+      $facet: {
+        active: [
+          { $match: { isDeleted: { $ne: true } } },
+          { $group: {
+              _id: null,
+              articles: { $sum: 1 },
+              units: { $sum: '$quantity' },
+              lowStock: { $sum: { $cond: [{ $and: [{ $gt: ['$quantity', 0] }, { $lte: ['$quantity', 5] }] }, 1, 0] } },
+              outOfStock: { $sum: { $cond: [{ $eq: ['$quantity', 0] }, 1, 0] } }
+          } }
+        ],
+        deleted: [
+          { $match: { isDeleted: true } },
+          { $count: 'count' }
+        ]
+      }
+    }
+  ]).toArray();
+  const activeStats = summary?.active[0] || { articles: 0, units: 0, lowStock: 0, outOfStock: 0 };
+  const deletedCount = summary?.deleted[0]?.count || 0;
+  res.json({
+    summary: {
+      articles: activeStats.articles,
+      units: activeStats.units,
+      lowStock: activeStats.lowStock,
+      outOfStock: activeStats.outOfStock,
+      deleted: deletedCount
+    }
+  });
 });
 router.get('/', async (req, res) => {
   const page = Number(req.query.page || 1), limit = Number(req.query.limit || 12);
   if (!Number.isInteger(page) || page < 1 || page > 100000 || !Number.isInteger(limit) || limit < 1 || limit > 100) fail('Invalid pagination.');
   const filter = {};
+  if (req.query.status === 'deleted') {
+    filter.isDeleted = true;
+  } else if (req.query.status === 'all') {
+    // Show all
+  } else {
+    filter.isDeleted = { $ne: true };
+  }
   if (req.query.search !== undefined) {
     if (typeof req.query.search !== 'string' || req.query.search.length > 120) fail('Search is too long.');
     filter.nameKey = { $regex: req.query.search.trim().toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&') };
@@ -50,16 +85,34 @@ router.get('/', async (req, res) => {
   res.json({ articles: items.map(serialize), total, page, pages: Math.max(1, Math.ceil(total / limit)) });
 });
 router.get('/:id', async (req, res) => {
-  const article = await collection().findOne({ _id: objectId(req.params.id) });
+  const filter = { _id: objectId(req.params.id) };
+  if (req.query.includeDeleted !== 'true') {
+    filter.isDeleted = { $ne: true };
+  }
+  const article = await collection().findOne(filter);
   if (!article) throw new ApiError(404, 'Article not found.');
   res.json({ article: serialize(article) });
+});
+router.post('/:id/restore', async (req, res) => {
+  const _id = objectId(req.params.id);
+  const previous = await collection().findOne({ _id });
+  if (!previous) throw new ApiError(404, 'Article not found.');
+  if (!previous.isDeleted) throw new ApiError(400, 'Article is not marked as deleted.');
+  const conflict = await collection().findOne({ nameKey: previous.nameKey, isDeleted: { $ne: true } });
+  if (conflict) throw new ApiError(409, 'An active article with this name already exists. Please rename it before restoring.');
+  const updated = await collection().findOneAndUpdate(
+    { _id },
+    { $set: { isDeleted: false, deletedAt: null }, $inc: { version: 1 } },
+    { returnDocument: 'after' }
+  );
+  res.json({ article: serialize(updated) });
 });
 router.post('/', upload, async (req, res) => {
   const body = input(req), fields = articleInput(body), _id = new ObjectId();
   const retained = images.retainedImages(body.images, []);
   if (retained.length + (req.files?.length || 0) > 6) fail('Use at most 6 images per article.');
   const saved = await images.saveImages(req.files || [], _id);
-  const article = { _id, ...fields, images: [...retained, ...saved], version: 1, createdAt: new Date(), updatedAt: new Date(), createdBy: req.user._id };
+  const article = { _id, ...fields, images: [...retained, ...saved], version: 1, isDeleted: false, createdAt: new Date(), updatedAt: new Date(), createdBy: req.user._id };
   try { await collection().insertOne(article); }
   catch (error) { await images.removeImages(saved); throw error; }
   res.status(201).json({ article: serialize(article) });
@@ -82,13 +135,17 @@ router.patch('/:id', upload, async (req, res) => {
 });
 router.delete('/:id', async (req, res) => {
   const _id = objectId(req.params.id), expectedVersion = version(req.body?.version);
-  const deleted = await collection().findOneAndDelete({ _id, version: expectedVersion });
-  if (!deleted) {
-    if (!await collection().findOne({ _id })) throw new ApiError(404, 'Article not found.');
-    throw new ApiError(409, 'This article changed elsewhere. Refresh before deleting.');
-  }
+  const previous = await collection().findOne({ _id });
+  if (!previous) throw new ApiError(404, 'Article not found.');
+  if (previous.version !== expectedVersion) throw new ApiError(409, 'This article changed elsewhere. Refresh before deleting.');
+  if (previous.isDeleted) return res.status(204).end();
+  
+  await collection().updateOne(
+    { _id, version: expectedVersion },
+    { $set: { isDeleted: true, deletedAt: new Date() }, $inc: { version: 1 } }
+  );
   await getDatabase().collection('storefront').updateOne({ 'slides.articleId': _id.toString() }, { $set: { 'slides.$[slide].articleId': '' }, $inc: { version: 1 } }, { arrayFilters: [{ 'slide.articleId': _id.toString() }] });
-  await images.removeImages(deleted.images);
+  await getDatabase().collection('storefront').updateOne({ featuredArticleIds: _id.toString() }, { $pull: { featuredArticleIds: _id.toString() }, $inc: { version: 1 } });
   res.status(204).end();
 });
 module.exports = router;

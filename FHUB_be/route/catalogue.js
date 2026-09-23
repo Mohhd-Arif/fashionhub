@@ -10,18 +10,21 @@ router.get('/storefront', async (req, res) => {
   let featured = [];
   if (selectedIds.length) {
     const ids = selectedIds.map(id => objectId(id));
-    const items = await getDatabase().collection('articles').find({ _id: { $in: ids } }).toArray();
+    const items = await getDatabase().collection('articles').find({ _id: { $in: ids }, isDeleted: { $ne: true } }).toArray();
     featured = selectedIds.map(id => items.find(item => item._id.toString() === id)).filter(Boolean);
   }
   if (featured.length < 6) {
     const used = new Set(featured.map(item => item._id.toString()));
-    const more = await getDatabase().collection('articles').find(used.size ? { _id: { $nin: [...used].map(objectId) } } : {}).sort({ createdAt: -1, _id: -1 }).limit(6 - featured.length).toArray();
+    const more = await getDatabase().collection('articles').find({
+      ...(used.size ? { _id: { $nin: [...used].map(objectId) } } : {}),
+      isDeleted: { $ne: true }
+    }).sort({ createdAt: -1, _id: -1 }).limit(6 - featured.length).toArray();
     featured.push(...more);
   }
   res.json({ storefront, featured: featured.map(serialize) });
 });
 router.get('/articles', async (req, res) => {
-  const filter = {};
+  const filter = { isDeleted: { $ne: true } };
   if (req.query.category) {
     if (!['kids', 'gents', 'ladies'].includes(req.query.category)) fail('Invalid collection.');
     filter.category = req.query.category;
@@ -38,7 +41,7 @@ router.get('/articles', async (req, res) => {
   res.json({ articles: items.map(serialize), total, page, pages: Math.max(1, Math.ceil(total / limit)) });
 });
 router.get('/articles/:id', async (req, res) => {
-  const item = await getDatabase().collection('articles').findOne({ _id: objectId(req.params.id) });
+  const item = await getDatabase().collection('articles').findOne({ _id: objectId(req.params.id), isDeleted: { $ne: true } });
   if (!item) throw new ApiError(404, 'Article not found.');
   res.json({ article: serialize(item) });
 });

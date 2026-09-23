@@ -1,6 +1,7 @@
 const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 const { randomBytes } = require('node:crypto');
+const { ObjectId } = require('mongodb');
 // Every test run uses an isolated database, never the configured store database.
 const testDatabase = `fhub_test_${randomBytes(8).toString('hex')}`;
 process.env.MONGODB_DB = testDatabase;
@@ -24,7 +25,9 @@ before(async () => {
 after(async () => {
   try {
     if (db && db.databaseName === testDatabase && /^fhub_test_[a-f\d]{16}$/.test(testDatabase)) {
-      for (const name of ['users', 'sessions', 'articles', 'articleImages.files', 'articleImages.chunks', 'imageCleanup', 'storefront']) await db.collection(name).deleteMany({});
+      for (const name of ['users', 'sessions', 'articles', 'articleImages.files', 'articleImages.chunks', 'imageCleanup', 'storefront']) {
+        try { await db.collection(name).drop(); } catch {}
+      }
     }
   }
   finally { await closeDatabase(); }
@@ -134,7 +137,12 @@ test('real image upload, streaming, replacement, failed upload rollback and clea
   assert.equal(await db.collection('articleImages.files').countDocuments(), 0);
   const withImage = (await write(admin.patch(`/api/admin/articles/${created.id}`)).field('article', JSON.stringify({ ...article, version: 2, images: [] })).attach('images', png, 'new.png').expect(200)).body.article;
   await write(admin.delete(`/api/admin/articles/${created.id}`)).send({ version: 3 }).expect(204);
-  await request(app).get(withImage.images[0].url).expect(404);
-  assert.equal(await db.collection('articleImages.files').countDocuments(), 0);
-  assert.equal(await db.collection('articleImages.chunks').countDocuments(), 0);
+  const softDeleted = await db.collection('articles').findOne({ _id: new ObjectId(created.id) });
+  assert.equal(softDeleted.isDeleted, true);
+  assert.ok(softDeleted.deletedAt);
+  await request(app).get(`/api/articles/${created.id}`).expect(404);
+  const deletedList = (await admin.get('/api/admin/articles?status=deleted').expect(200)).body;
+  assert.equal(deletedList.articles.some(a => a.id === created.id), true);
+  assert.equal(await db.collection('articleImages.files').countDocuments(), 1);
 });
+

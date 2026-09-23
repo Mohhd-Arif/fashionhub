@@ -59,6 +59,17 @@ function normalizeOrigin(value) {
     return '';
   }
 }
+function isPrivateOrLocalHost(hostname) {
+  return (
+    hostname === 'localhost' ||
+    hostname === '127.0.0.1' ||
+    hostname === '::1' ||
+    hostname.endsWith('.local') ||
+    /^192\.168\.\d{1,3}\.\d{1,3}$/.test(hostname) ||
+    /^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(hostname) ||
+    /^172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}$/.test(hostname)
+  );
+}
 function protectWrites(req, res, next) {
   if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next();
   // Custom headers cannot be sent by cross-origin forms; no cross-origin CORS is enabled.
@@ -66,9 +77,11 @@ function protectWrites(req, res, next) {
   const origin = normalizeOrigin(req.get('Origin'));
   if (origin) {
     const allowed = new Set((process.env.APP_ORIGINS || 'http://localhost:5173,http://127.0.0.1:5173,http://localhost:8000,http://127.0.0.1:8000').split(',').map(s => s.trim()).filter(Boolean));
-    const originHost = new URL(origin).host;
+    const originUrl = new URL(origin);
+    const originHost = originUrl.host;
     const requestHost = (req.get('X-Forwarded-Host') || req.get('Host') || '').split(',')[0].trim().toLowerCase();
-    if (!allowed.has(origin) && originHost !== requestHost) throw new ApiError(403, 'This request origin is not allowed.');
+    const isAllowed = allowed.has(origin) || originHost === requestHost || isPrivateOrLocalHost(originUrl.hostname);
+    if (!isAllowed) throw new ApiError(403, 'This request origin is not allowed.');
   }
   next();
 }
