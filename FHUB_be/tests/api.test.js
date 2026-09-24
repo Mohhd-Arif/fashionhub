@@ -25,7 +25,7 @@ before(async () => {
 after(async () => {
   try {
     if (db && db.databaseName === testDatabase && /^fhub_test_[a-f\d]{16}$/.test(testDatabase)) {
-      for (const name of ['users', 'sessions', 'articles', 'articleImages.files', 'articleImages.chunks', 'imageCleanup', 'storefront']) {
+      for (const name of ['users', 'sessions', 'articles', 'articleRanking', 'articleImages.files', 'articleImages.chunks', 'imageCleanup', 'storefront']) {
         try { await db.collection(name).drop(); } catch {}
       }
     }
@@ -146,3 +146,41 @@ test('real image upload, streaming, replacement, failed upload rollback and clea
   assert.equal(await db.collection('articleImages.files').countDocuments(), 1);
 });
 
+test('top articles keep a compact order across Explore pages and categories', async () => {
+  await write(admin.post('/api/auth/login')).send({ email: 'admin@example.test', password: 'Test-password-123!' }).expect(200);
+  const ids = [];
+  for (let i = 0; i < 14; i++) {
+    const created = (await write(admin.post('/api/admin/articles')).send({ ...article, name: `Rank test ${i}`, category: i % 2 ? 'gents' : 'ladies', gender: i % 2 ? 'male' : 'female' }).expect(201)).body.article;
+    ids.push(created.id);
+  }
+  await write(admin.patch(`/api/admin/articles/${ids[0]}/top`)).send({ position: 1 }).expect(200);
+  await write(admin.patch(`/api/admin/articles/${ids[1]}/top`)).send({ position: 2 }).expect(200);
+  await write(admin.patch(`/api/admin/articles/${ids[2]}/top`)).send({ position: 3 }).expect(200);
+  assert.deepEqual((await admin.get('/api/admin/articles?top=only&limit=100').expect(200)).body.articles.map(a => a.id), ids.slice(0, 3));
+  assert.deepEqual((await request(app).get('/api/storefront').expect(200)).body.featured.map(a => a.id), ids.slice(0, 3));
+  await write(admin.patch(`/api/admin/articles/${ids[2]}/top`)).send({ position: 1 }).expect(200);
+  assert.deepEqual((await admin.get('/api/admin/articles?top=only&limit=100').expect(200)).body.articles.map(a => a.id), [ids[2], ids[1], ids[0]]);
+  await write(admin.patch(`/api/admin/articles/${ids[0]}/top`)).send({ position: null }).expect(200);
+  assert.deepEqual((await admin.get('/api/admin/articles?top=only&limit=100').expect(200)).body.articles.map(a => a.topPosition), [1, 2]);
+  await write(admin.patch(`/api/admin/articles/${ids[0]}/top`)).send({ position: 999999 }).expect(200);
+  const all = (await request(app).get('/api/articles?sort=low').expect(200)).body;
+  assert.deepEqual(all.articles.slice(0, 3).map(a => a.id), [ids[2], ids[1], ids[0]]);
+  const rankedAdmin = (await admin.get('/api/admin/articles?top=only&limit=2').expect(200)).body;
+  assert.equal(rankedAdmin.total, 3);
+  assert.deepEqual(rankedAdmin.articles.map(a => a.id), [ids[2], ids[1]]);
+  assert.equal((await admin.get('/api/admin/articles?top=only&limit=2&page=2').expect(200)).body.articles[0].id, ids[0]);
+  assert.deepEqual((await admin.get('/api/admin/articles?top=only&category=ladies').expect(200)).body.articles.map(a => a.id), [ids[2], ids[0]]);
+  const next = (await request(app).get('/api/articles?page=2').expect(200)).body;
+  assert.equal(next.articles.some(a => a.topPosition), false);
+  const ladies = (await request(app).get('/api/articles?category=ladies').expect(200)).body;
+  assert.deepEqual(ladies.articles.slice(0, 2).map(a => a.id), [ids[2], ids[0]]);
+  await write(admin.patch(`/api/admin/articles/${ids[1]}/top`)).send({ position: 0 }).expect(400);
+  await write(admin.delete(`/api/admin/articles/${ids[2]}`)).send({ version: 1 }).expect(204);
+  assert.deepEqual((await admin.get('/api/admin/articles?top=only&limit=100').expect(200)).body.articles.map(a => a.id), [ids[1], ids[0]]);
+  for (const id of ids.slice(3)) await write(admin.patch(`/api/admin/articles/${id}/top`)).send({ position: 999999 }).expect(200);
+  const secondPage = (await request(app).get('/api/articles?page=2').expect(200)).body.articles;
+  assert.equal(secondPage[0].id, ids[13]);
+  assert.equal(secondPage[0].topPosition, 13);
+  assert.equal((await admin.get('/api/admin/articles?top=only&limit=12&page=2').expect(200)).body.articles[0].topPosition, 13);
+  assert.deepEqual((await request(app).get('/api/storefront').expect(200)).body.featured.map(a => a.id), [ids[1], ids[0], ...ids.slice(3, 7)]);
+});

@@ -5,13 +5,14 @@ const { getDatabase } = require('../config/database');
 const { requireUser, requireAdmin } = require('../service/auth');
 const { ApiError, articleInput, objectId, version, fail } = require('../service/validation');
 const images = require('../service/images');
+const topArticles = require('../service/top-articles');
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024, files: 6, fields: 10, fieldSize: 512 * 1024, parts: 20 } }).array('images', 6);
 const collection = () => getDatabase().collection('articles');
-function serialize(article) {
+function serialize(article, topPosition = null) {
   return { id: article._id.toString(), name: article.name, quantity: article.quantity, size: article.size,
     price: article.price.toString(), discount: article.discount.toString(), gender: article.gender, category: article.category || (article.gender === 'male' ? 'gents' : 'ladies'), version: article.version,
     images: (article.images || []).map(image => image.type === 'gridfs' ? { type: 'gridfs', fileId: image.fileId.toString(), url: `/api/images/${image.fileId}` } : image),
-    createdAt: article.createdAt, updatedAt: article.updatedAt,
+    createdAt: article.createdAt, updatedAt: article.updatedAt, topPosition,
     isDeleted: Boolean(article.isDeleted), deletedAt: article.deletedAt || null };
 }
 function input(req) {
@@ -21,6 +22,12 @@ function input(req) {
   return req.body;
 }
 router.use(requireUser, requireAdmin);
+router.patch('/:id/top', async (req, res) => {
+  const position = req.body?.position;
+  if (position !== null && (!Number.isInteger(position) || position < 1)) fail('Top position must be a positive whole number, or null to remove.');
+  const ids = await topArticles.setTopPosition(req.params.id, position);
+  res.json({ position: ids.indexOf(req.params.id) + 1 || null, total: ids.length });
+});
 router.get('/summary', async (req, res) => {
   const [summary] = await collection().aggregate([
     {
@@ -57,8 +64,14 @@ router.get('/summary', async (req, res) => {
 router.get('/', async (req, res) => {
   const page = Number(req.query.page || 1), limit = Number(req.query.limit || 12);
   if (!Number.isInteger(page) || page < 1 || page > 100000 || !Number.isInteger(limit) || limit < 1 || limit > 100) fail('Invalid pagination.');
+  if (req.query.top && req.query.top !== 'only') fail('Invalid top articles filter.');
+  const topOnly = req.query.top === 'only';
+  const topIds = await topArticles.getTopIds();
   const filter = {};
-  if (req.query.status === 'deleted') {
+  if (topOnly) {
+    filter.isDeleted = { $ne: true };
+    filter._id = { $in: topIds.map(objectId) };
+  } else if (req.query.status === 'deleted') {
     filter.isDeleted = true;
   } else if (req.query.status === 'all') {
     // Show all
@@ -81,8 +94,11 @@ router.get('/', async (req, res) => {
     if (!['in', 'low', 'out'].includes(req.query.stock)) fail('Invalid stock filter.');
     filter.quantity = req.query.stock === 'out' ? 0 : req.query.stock === 'low' ? { $gt: 0, $lte: 5 } : { $gt: 0 };
   }
-  const [items, total] = await Promise.all([collection().find(filter).sort({ createdAt: -1, _id: -1 }).skip((page - 1) * limit).limit(limit).toArray(), collection().countDocuments(filter)]);
-  res.json({ articles: items.map(serialize), total, page, pages: Math.max(1, Math.ceil(total / limit)) });
+  const itemsQuery = topOnly
+    ? collection().aggregate([{ $match: filter }, { $addFields: { rankIndex: { $indexOfArray: [topIds.map(objectId), '$_id'] } } }, { $sort: { rankIndex: 1 } }, { $skip: (page - 1) * limit }, { $limit: limit }])
+    : collection().find(filter).sort({ createdAt: -1, _id: -1 }).skip((page - 1) * limit).limit(limit);
+  const [items, total] = await Promise.all([itemsQuery.toArray(), collection().countDocuments(filter)]);
+  res.json({ articles: items.map(item => serialize(item, topIds.indexOf(item._id.toString()) + 1 || null)), total, page, pages: Math.max(1, Math.ceil(total / limit)) });
 });
 router.get('/:id', async (req, res) => {
   const filter = { _id: objectId(req.params.id) };
@@ -91,7 +107,8 @@ router.get('/:id', async (req, res) => {
   }
   const article = await collection().findOne(filter);
   if (!article) throw new ApiError(404, 'Article not found.');
-  res.json({ article: serialize(article) });
+  const topIds = await topArticles.getTopIds();
+  res.json({ article: serialize(article, topIds.indexOf(article._id.toString()) + 1 || null) });
 });
 router.post('/:id/restore', async (req, res) => {
   const _id = objectId(req.params.id);
@@ -146,6 +163,7 @@ router.delete('/:id', async (req, res) => {
   );
   await getDatabase().collection('storefront').updateOne({ 'slides.articleId': _id.toString() }, { $set: { 'slides.$[slide].articleId': '' }, $inc: { version: 1 } }, { arrayFilters: [{ 'slide.articleId': _id.toString() }] });
   await getDatabase().collection('storefront').updateOne({ featuredArticleIds: _id.toString() }, { $pull: { featuredArticleIds: _id.toString() }, $inc: { version: 1 } });
+  await topArticles.removeTopArticle(_id.toString());
   res.status(204).end();
 });
 module.exports = router;
