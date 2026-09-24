@@ -26,7 +26,7 @@ router.get('/storefront', async (req, res) => {
 router.get('/articles', async (req, res) => {
   const filter = { isDeleted: { $ne: true } };
   if (req.query.category) {
-    if (!['kids', 'gents', 'ladies'].includes(req.query.category)) fail('Invalid collection.');
+    if (!['kids', 'gents', 'ladies', 'accessories'].includes(req.query.category)) fail('Invalid collection.');
     filter.category = req.query.category;
   }
   if (req.query.search) {

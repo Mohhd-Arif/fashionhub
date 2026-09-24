@@ -70,11 +70,11 @@ router.get('/', async (req, res) => {
     filter.nameKey = { $regex: req.query.search.trim().toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&') };
   }
   if (req.query.gender) {
-    if (!['male', 'female'].includes(req.query.gender)) fail('Invalid gender filter.');
+    if (!['male', 'female', 'unisex'].includes(req.query.gender)) fail('Invalid gender filter.');
     filter.gender = req.query.gender;
   }
   if (req.query.category) {
-    if (!['kids', 'gents', 'ladies'].includes(req.query.category)) fail('Invalid collection filter.');
+    if (!['kids', 'gents', 'ladies', 'accessories'].includes(req.query.category)) fail('Invalid collection filter.');
     filter.category = req.query.category;
   }
   if (req.query.stock) {

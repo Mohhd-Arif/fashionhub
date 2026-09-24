@@ -31,9 +31,9 @@ function articleInput(body) {
   if (typeof body.size !== 'string' || !body.size.trim() || body.size.trim().length > 40) fail('Size must be between 1 and 40 characters.');
   const aliases = { 'extra small':'XS', xs:'XS', small:'S', s:'S', medium:'M', m:'M', large:'L', l:'L', 'extra large':'XL', xl:'XL', xxl:'XXL', xxxl:'XXXL' };
   const size = aliases[body.size.trim().toLowerCase()] || body.size.trim();
-  if (!['male', 'female'].includes(body.gender)) fail('Gender must be male or female.');
+  if (!['male', 'female', 'unisex'].includes(body.gender)) fail('Gender must be male, female or unisex.');
   const category = body.category || (body.gender === 'male' ? 'gents' : 'ladies');
-  if (!['kids', 'gents', 'ladies'].includes(category)) fail('Collection must be kids, gents or ladies.');
+  if (!['kids', 'gents', 'ladies', 'accessories'].includes(category)) fail('Collection must be kids, gents, ladies or accessories.');
   const discountVal = (body.discount === '' || body.discount === null || body.discount === undefined) ? 0 : body.discount;
   return { name, nameKey: name.toLowerCase(), quantity: body.quantity, size, gender: body.gender, category,
     price: Decimal128.fromString(decimal(body.price, 'Price', 9999999.99)),
