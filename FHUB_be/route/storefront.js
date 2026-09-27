@@ -5,7 +5,7 @@ const { getDatabase } = require('../config/database');
 const { requireUser, requireAdmin } = require('../service/auth');
 const { ApiError, version, fail } = require('../service/validation');
 const { getStorefront, present, validateStorefront } = require('../service/storefront');
-const { saveImages, removeImages } = require('../service/images');
+const { saveImages, removeImages, sameImage } = require('../service/images');
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024, files: 4, fields: 1, fieldSize: 32 * 1024, parts: 5 } }).fields(['kids', 'gents', 'ladies', 'story'].map(name => ({ name, maxCount: 1 })));
 
 router.use(requireUser, requireAdmin);
@@ -20,7 +20,7 @@ router.patch('/', upload, async (req, res) => {
   try {
     for (const key of ['kids', 'gents', 'ladies', 'story']) {
       if (req.files?.[key]?.[0]) {
-        const saved = await saveImages(req.files[key], new ObjectId());
+        const saved = await saveImages(req.files[key], new ObjectId(), 'storefront');
         uploaded.push(...saved);
         if (key === 'story') settings.storyImage = saved[0];
         else settings.slides.find(s => s.id === key).image = saved[0];
@@ -36,13 +36,13 @@ router.patch('/', upload, async (req, res) => {
     }
     const before = [previous.storyImage, ...previous.slides.map(s => s.image)];
     const after = [settings.storyImage, ...settings.slides.map(s => s.image)];
-    await removeImages(before.filter(i => i.type === 'gridfs' && !after.some(j => j.type === 'gridfs' && (j.fileId?.toString() === i.fileId?.toString()))));
+    await removeImages(before.filter(image => image && !after.some(item => sameImage(item, image))));
     res.json({ storefront: present(update) });
   } catch (error) {
     // Only clean up files that are not referenced by a committed update.
     const current = await getStorefront();
-    const refs = [current.storyImage, ...current.slides.map(s => s.image)].filter(i => i?.type === 'gridfs').map(i => i.fileId.toString());
-    await removeImages(uploaded.filter(i => !refs.includes(i.fileId.toString())));
+    const refs = [current.storyImage, ...current.slides.map(s => s.image)];
+    await removeImages(uploaded.filter(image => !refs.some(item => sameImage(item, image))));
     throw error;
   }
 });

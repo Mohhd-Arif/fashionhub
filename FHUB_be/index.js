@@ -7,6 +7,7 @@ const helmet = require('helmet');
 const { protectWrites } = require('./service/auth');
 const { ensureIndexes } = require('./config/indexes');
 const { retryImageCleanup } = require('./service/images');
+const { ImageKitError } = require('./service/imagekit');
 const server = express();
 const frontendCandidates = [
   process.env.FRONTEND_DIST && path.resolve(process.env.FRONTEND_DIST),
@@ -132,6 +133,7 @@ server.use((error, req, res, next) => {
   if (error.name === 'MulterError') return res.status(400).json({ error: 'Upload up to 6 images, each under 5 MB, using the images field.' });
   if (error.type === 'entity.parse.failed') return res.status(400).json({ error: 'Request body must contain valid JSON.' });
   if (error.type === 'entity.too.large') return res.status(413).json({ error: 'Request is too large.' });
+  if (error instanceof ImageKitError) return res.status(503).json({ error: error.message });
   if (error.status && error.status < 500) return res.status(error.status).json({ error: error.message });
   console.error('API request failed:', error);
   res.status(500).json({ error: 'Something went wrong. Please try again.' });

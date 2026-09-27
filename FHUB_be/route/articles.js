@@ -6,6 +6,7 @@ const { requireUser, requireAdmin } = require('../service/auth');
 const { ApiError, articleInput, objectId, version, fail } = require('../service/validation');
 const images = require('../service/images');
 const topArticles = require('../service/top-articles');
+const socialPublishing = require('../service/social-publishing');
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024, files: 6, fields: 10, fieldSize: 512 * 1024, parts: 20 } }).array('images', 6);
 const collection = () => getDatabase().collection('articles');
 function serialize(article, topPosition = null) {
@@ -110,6 +111,19 @@ router.get('/:id', async (req, res) => {
   const topIds = await topArticles.getTopIds();
   res.json({ article: serialize(article, topIds.indexOf(article._id.toString()) + 1 || null) });
 });
+router.get('/:id/social', async (req, res) => {
+  const _id = objectId(req.params.id);
+  if (!await collection().findOne({ _id }, { projection: { _id: 1 } })) throw new ApiError(404, 'Article not found.');
+  res.json({ social: await socialPublishing.getPublication(_id) });
+});
+router.post('/:id/social/retry', async (req, res) => {
+  const platform = req.body?.platform;
+  if (!['facebook', 'instagram', 'both'].includes(platform)) fail('Choose facebook, instagram or both.');
+  const _id = objectId(req.params.id);
+  if (!await collection().findOne({ _id, isDeleted: { $ne: true } }, { projection: { _id: 1 } })) throw new ApiError(404, 'Article not found.');
+  const social = await socialPublishing.publishArticle(_id, platform === 'both' ? ['facebook', 'instagram'] : [platform], { confirmNoPost: req.body?.confirmNoPost === true });
+  res.json({ social });
+});
 router.post('/:id/restore', async (req, res) => {
   const _id = objectId(req.params.id);
   const previous = await collection().findOne({ _id });
@@ -132,7 +146,10 @@ router.post('/', upload, async (req, res) => {
   const article = { _id, ...fields, images: [...retained, ...saved], version: 1, isDeleted: false, createdAt: new Date(), updatedAt: new Date(), createdBy: req.user._id };
   try { await collection().insertOne(article); }
   catch (error) { await images.removeImages(saved); throw error; }
-  res.status(201).json({ article: serialize(article) });
+  let social;
+  try { social = await socialPublishing.publishArticle(_id); }
+  catch { social = { error: 'Article saved, but social publishing could not be scheduled. Retry from the article editor.' }; }
+  res.status(201).json({ article: serialize(article), social });
 });
 router.patch('/:id', upload, async (req, res) => {
   const _id = objectId(req.params.id), body = input(req), fields = articleInput(body), expectedVersion = version(body.version);
@@ -147,7 +164,7 @@ router.patch('/:id', upload, async (req, res) => {
     updated = await collection().findOneAndUpdate({ _id, version: expectedVersion }, { $set: { ...fields, images: [...retained, ...saved], updatedAt: new Date() }, $inc: { version: 1 } }, { returnDocument: 'after' });
     if (!updated) throw new ApiError(409, 'This article changed elsewhere. Refresh and try again.');
   } catch (error) { await images.removeImages(saved); throw error; }
-  await images.removeImages(previous.images.filter(i => i.type === 'gridfs' && !retained.some(r => r.type === 'gridfs' && (r.fileId?.toString() === i.fileId?.toString()))));
+  await images.removeImages((previous.images || []).filter(image => !retained.some(item => images.sameImage(item, image))));
   res.json({ article: serialize(updated) });
 });
 router.delete('/:id', async (req, res) => {

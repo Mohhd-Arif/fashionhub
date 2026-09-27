@@ -11,9 +11,26 @@ const { connectDatabase, closeDatabase } = require('./config/database');
 const { ensureIndexes } = require('./config/indexes');
 const { hashPassword } = require('./service/auth');
 const { getStorefront } = require('./service/storefront');
-const { saveImages } = require('./service/images');
+const { saveLegacyImages } = require('./service/images');
 const { ObjectId, Decimal128 } = require('mongodb');
 const sharp = require('sharp');
+process.env.IMAGEKIT_PRIVATE_KEY = 'private_browser_test_only';
+const remoteImages = new Map();
+let nextRemoteImage = 0;
+globalThis.fetch = async (url, options = {}) => {
+  const address = String(url);
+  if (address === 'https://upload.imagekit.io/api/v1/files/upload') {
+    const file = options.body.get('file');
+    const id = `browserimage${++nextRemoteImage}`;
+    remoteImages.set(id, Buffer.from(await file.arrayBuffer()));
+    return Response.json({ fileId: id, url: `https://ik.imagekit.io/webfashionhub/${id}.webp` });
+  }
+  if (address.startsWith('https://api.imagekit.io/v1/files/') && options.method === 'DELETE') {
+    remoteImages.delete(address.split('/').pop());
+    return new Response(null, { status: 204 });
+  }
+  throw new Error(`Unexpected test fetch: ${address}`);
+};
 let db, server, backendUrl;
 const password = `Browser-test-${randomBytes(12).toString('hex')}`;
 
@@ -25,7 +42,7 @@ test.beforeAll(async () => {
   const buffer = readFileSync(new URL('../public/images/photo-1598554747436-c9293d6a588f.jpg', import.meta.url));
   for (const [i, name] of ['Everyday linen shirt', 'Weekend cotton tee', 'Relaxed denim', 'Summer essentials'].entries()) {
     const _id = new ObjectId();
-    await db.collection('articles').insertOne({ _id, name, nameKey: name.toLowerCase(), size: ['M', 'L', '32', 'Free size'][i], category: ['ladies', 'gents', 'kids', 'ladies'][i], gender: i % 2 ? 'male' : 'female', quantity: [12, 4, 0, 8][i], price: Decimal128.fromString('1299.00'), discount: Decimal128.fromString('10.00'), version: 1, images: await saveImages([{ buffer }], _id), createdAt: new Date(), updatedAt: new Date() });
+    await db.collection('articles').insertOne({ _id, name, nameKey: name.toLowerCase(), size: ['M', 'L', '32', 'Free size'][i], category: ['ladies', 'gents', 'kids', 'ladies'][i], gender: i % 2 ? 'male' : 'female', quantity: [12, 4, 0, 8][i], price: Decimal128.fromString('1299.00'), discount: Decimal128.fromString('10.00'), version: 1, images: await saveLegacyImages([{ buffer }], _id), createdAt: new Date(), updatedAt: new Date() });
   }
   server = app.listen(0, '127.0.0.1');
   await new Promise(resolve => server.once('listening', resolve));
@@ -36,13 +53,18 @@ test.afterAll(async () => {
   try {
     if (server) await new Promise(resolve => server.close(resolve));
     if (db?.databaseName === testDatabase && /^fhub_test_[a-f\d]{16}$/.test(testDatabase)) {
-      for (const name of ['users', 'sessions', 'articles', 'articleRanking', 'articleImages.files', 'articleImages.chunks', 'imageCleanup', 'storefront']) await db.collection(name).deleteMany({});
+      for (const name of ['users', 'sessions', 'articles', 'articleRanking', 'articleImages.files', 'articleImages.chunks', 'imageCleanup', 'imageMigrations', 'socialPublications', 'storefront']) await db.collection(name).deleteMany({});
     }
   } finally { await closeDatabase(); }
 });
 
 test.beforeEach(async ({ page }) => {
   // Forward real HTTP requests to an isolated Express/MongoDB instance; no API responses are mocked.
+  await page.route('https://ik.imagekit.io/webfashionhub/**', route => {
+    const id = new URL(route.request().url()).pathname.match(/\/([^/]+)\.webp$/)?.[1];
+    const body = remoteImages.get(id);
+    return route.fulfill(body ? { status: 200, contentType: 'image/webp', body } : { status: 404, body: '' });
+  });
   await page.route('**/api/**', async route => {
     const url = new URL(route.request().url());
     try {
@@ -178,7 +200,7 @@ test('admin login, image upload, edit, filters, persistent session and delete', 
   await page.getByRole('button', { name: 'Add article', exact: true }).click();
   const dialog = page.getByRole('dialog');
   await dialog.getByLabel(/Article name/).fill('Browser test shirt');
-  await dialog.getByLabel(/^Size/).fill('38 / custom');
+  await dialog.locator('input[name="size"]').fill('38 / custom');
   await dialog.getByLabel(/^Quantity/).fill('7');
   await dialog.getByLabel(/^Price/).fill('999.95');
   await dialog.getByLabel('Discount (%)').fill('12.5');
@@ -212,7 +234,7 @@ test('admin login, image upload, edit, filters, persistent session and delete', 
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: 'test-results/admin-mobile.png', fullPage: true });
   await row.getByRole('button', { name: 'Delete Browser test shirt' }).click();
-  await dialog.getByRole('button', { name: 'Delete article', exact: true }).click();
+  await dialog.getByRole('button', { name: 'Mark as deleted', exact: true }).click();
   await expect(dialog).toHaveCount(0);
   await expect(page.getByRole('heading', { name: 'No matching articles.' })).toBeVisible();
   await page.getByRole('button', { name: 'Sign out', exact: true }).last().click();
@@ -256,13 +278,13 @@ test('admin publishes collection images and messages, customer sees live article
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: 'test-results/storefront-editor-mobile.png', fullPage: true });
   await page.goto('/');
-  await expect(page.locator('.shop-announcement')).toContainText('Fresh fits. Save on our latest arrivals.');
+  await expect(page.locator('.shop-hero')).toBeVisible();
   await expect(page.locator('.hero-image-badge')).toHaveCount(0);
   await expect(page.locator('.hero-offer-card')).toHaveCount(0);
   await expect(page.locator('.hero-controls')).toHaveCount(0);
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Little styles. Big adventures.');
   await expect.poll(() => page.locator('.hero-carousel-strip>img').first().evaluate(image => image.complete && image.naturalWidth > 0)).toBe(true);
-  await expect(page.locator('.hero-carousel-strip>img').first()).toHaveAttribute('src', /\/api\/images\//);
+  await expect(page.locator('.hero-carousel-strip>img').first()).toHaveAttribute('src', /^https:\/\/ik\.imagekit\.io\/webfashionhub\//);
   await page.getByRole('button', { name: 'View Everyday linen shirt', exact: true }).click();
   const dialog = page.getByRole('dialog');
   await expect(dialog).toContainText('1,169.1');

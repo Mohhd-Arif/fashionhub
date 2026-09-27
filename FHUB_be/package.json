@@ -8,6 +8,8 @@
     "start": "node index.js",
     "db:check": "node scripts/check-db.js",
     "admin:create": "node scripts/create-admin.js",
+    "images:migrate": "node scripts/migrate-images.js",
+    "meta:check": "node scripts/check-meta.js",
     "render:build": "npm ci && npm run frontend:build",
     "frontend:build": "node scripts/build-frontend.js"
   },

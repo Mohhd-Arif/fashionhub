@@ -2,6 +2,28 @@ const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 const { randomBytes } = require('node:crypto');
 const { ObjectId } = require('mongodb');
+process.env.IMAGEKIT_PRIVATE_KEY = 'private_test_only';
+const remoteImages = new Map();
+let nextRemoteImage = 0;
+global.fetch = async (url, options = {}) => {
+  const address = String(url);
+  if (address === 'https://upload.imagekit.io/api/v1/files/upload') {
+    assert.match(options.headers.Authorization, /^Basic /);
+    const file = options.body.get('file');
+    const id = `testimage${++nextRemoteImage}`;
+    const imageUrl = `https://ik.imagekit.io/webfashionhub/${id}.webp`;
+    remoteImages.set(id, Buffer.from(await file.arrayBuffer()));
+    return Response.json({ fileId: id, url: imageUrl });
+  }
+  if (address.startsWith('https://api.imagekit.io/v1/files/') && options.method === 'DELETE') {
+    remoteImages.delete(address.split('/').pop());
+    return new Response(null, { status: 204 });
+  }
+  if (address.startsWith('https://ik.imagekit.io/webfashionhub/') && options.method === 'HEAD') {
+    return new Response(null, { status: remoteImages.has(address.match(/\/([^/]+)\.webp$/)?.[1]) ? 200 : 404, headers: { 'content-type': 'image/webp' } });
+  }
+  throw new Error(`Unexpected test fetch: ${address}`);
+};
 // Every test run uses an isolated database, never the configured store database.
 const testDatabase = `fhub_test_${randomBytes(8).toString('hex')}`;
 process.env.MONGODB_DB = testDatabase;
@@ -11,6 +33,8 @@ const app = require('../index');
 const { connectDatabase, closeDatabase } = require('../config/database');
 const { ensureIndexes } = require('../config/indexes');
 const { hashPassword } = require('../service/auth');
+const { saveLegacyImages } = require('../service/images');
+const { scanLegacyImages, migrateReference, cleanupMigratedLegacy } = require('../service/image-migration');
 let db, admin;
 const article = { name: 'Everyday shirt', quantity: 4, size: 'extra small', price: '1299.95', discount: '12.50', gender: 'female', images: [] };
 const write = req => req.set('X-Requested-With', 'FashionHub');
@@ -25,7 +49,7 @@ before(async () => {
 after(async () => {
   try {
     if (db && db.databaseName === testDatabase && /^fhub_test_[a-f\d]{16}$/.test(testDatabase)) {
-      for (const name of ['users', 'sessions', 'articles', 'articleRanking', 'articleImages.files', 'articleImages.chunks', 'imageCleanup', 'storefront']) {
+      for (const name of ['users', 'sessions', 'articles', 'articleRanking', 'articleImages.files', 'articleImages.chunks', 'imageCleanup', 'imageMigrations', 'socialPublications', 'storefront']) {
         try { await db.collection(name).drop(); } catch {}
       }
     }
@@ -99,8 +123,9 @@ test('admin-only storefront edits, featured articles, image uploads and live pub
   const body = { ...original, announcement: 'Our new kids collection is here', slides: original.slides.map(s => s.id === 'kids' ? { ...s, articleId: kid.id } : s) };
   const updated = (await write(admin.patch('/api/admin/storefront')).field('storefront', JSON.stringify(body)).attach('kids', png, 'kids.png').expect(200)).body.storefront;
   assert.equal(updated.version, 2);
-  assert.equal(updated.slides[0].image.type, 'gridfs');
-  await request(app).get(updated.slides[0].image.url).expect(200);
+  assert.equal(updated.slides[0].image.type, 'url');
+  assert.match(updated.slides[0].image.url, /^https:\/\/ik\.imagekit\.io\/webfashionhub\//);
+  assert.equal(remoteImages.has(updated.slides[0].image.imagekitFileId), true);
   const live = (await request(app).get('/api/storefront').expect(200)).body;
   assert.equal(live.storefront.announcement, body.announcement);
   assert.equal(live.featured[0].id, kid.id);
@@ -112,29 +137,30 @@ test('admin-only storefront edits, featured articles, image uploads and live pub
   assert.equal(cleared.storefront.version, 3);
   const replaced = { ...cleared.storefront, slides: cleared.storefront.slides.map(s => s.id === 'kids' ? { ...s, image: { type: 'url', url: 'https://example.com/kids.jpg' } } : s) };
   await write(admin.patch('/api/admin/storefront')).send(replaced).expect(200);
-  await request(app).get(updated.slides[0].image.url).expect(404);
+  assert.equal(remoteImages.has(updated.slides[0].image.imagekitFileId), false);
 });
 
-test('real image upload, streaming, replacement, failed upload rollback and cleanup', async () => {
+test('ImageKit upload, replacement, failed upload rollback and cleanup', async () => {
   const png = await sharp({ create: { width: 20, height: 20, channels: 3, background: '#aabbcc' } }).png().toBuffer();
+  const initialRemoteCount = remoteImages.size;
   await write(admin.post('/api/admin/articles')).field('article', JSON.stringify({ ...article, name: 'Invalid file' })).attach('images', Buffer.from('<svg></svg>'), 'fake.png').expect(400);
   await write(admin.post('/api/admin/articles')).field('article', JSON.stringify({ ...article, name: 'Rollback files' })).attach('images', png, 'valid.png').attach('images', Buffer.from('not an image'), 'invalid.png').expect(400);
+  assert.equal(remoteImages.size, initialRemoteCount);
   assert.equal(await db.collection('articleImages.files').countDocuments(), 0);
-  assert.equal(await db.collection('articleImages.chunks').countDocuments(), 0);
   await write(admin.post('/api/admin/articles')).send({ ...article, images: ['javascript:alert(1)'] }).expect(400);
   const created = (await write(admin.post('/api/admin/articles')).field('article', JSON.stringify(article)).attach('images', png, 'shirt.png').expect(201)).body.article;
-  assert.equal(created.images[0].type, 'gridfs');
-  const imageResponse = await request(app).get(created.images[0].url).expect(200);
-  assert.match(imageResponse.headers['content-type'], /image\/webp/);
-  const metadata = await sharp(imageResponse.body).metadata();
+  assert.equal(created.images[0].type, 'url');
+  assert.match(created.images[0].url, /^https:\/\/ik\.imagekit\.io\/webfashionhub\//);
+  const metadata = await sharp(remoteImages.get(created.images[0].imagekitFileId)).metadata();
   assert.equal(metadata.format, 'webp');
-  await write(admin.post('/api/admin/articles')).send({ ...article, name: 'Cannot steal image', images: created.images }).expect(400);
+  const linked = (await write(admin.post('/api/admin/articles')).send({ ...article, name: 'Linked public image', images: [{ type: 'url', url: 'https://example.com/other.webp', imagekitFileId: created.images[0].imagekitFileId }] }).expect(201)).body.article;
+  assert.equal(linked.images[0].url, 'https://example.com/other.webp');
+  assert.equal(linked.images[0].imagekitFileId, undefined);
   await write(admin.post('/api/admin/articles')).field('article', JSON.stringify(article)).attach('images', png, 'duplicate.png').expect(409);
-  assert.equal(await db.collection('articleImages.files').countDocuments(), 1);
+  assert.equal(remoteImages.size, initialRemoteCount + 1);
   const edited = (await write(admin.patch(`/api/admin/articles/${created.id}`)).send({ ...article, version: 1, images: ['https://example.com/image.webp'] }).expect(200)).body.article;
   assert.equal(edited.images[0].type, 'url');
-  await request(app).get(created.images[0].url).expect(404);
-  assert.equal(await db.collection('articleImages.files').countDocuments(), 0);
+  assert.equal(remoteImages.has(created.images[0].imagekitFileId), false);
   const withImage = (await write(admin.patch(`/api/admin/articles/${created.id}`)).field('article', JSON.stringify({ ...article, version: 2, images: [] })).attach('images', png, 'new.png').expect(200)).body.article;
   await write(admin.delete(`/api/admin/articles/${created.id}`)).send({ version: 3 }).expect(204);
   const softDeleted = await db.collection('articles').findOne({ _id: new ObjectId(created.id) });
@@ -143,7 +169,7 @@ test('real image upload, streaming, replacement, failed upload rollback and clea
   await request(app).get(`/api/articles/${created.id}`).expect(404);
   const deletedList = (await admin.get('/api/admin/articles?status=deleted').expect(200)).body;
   assert.equal(deletedList.articles.some(a => a.id === created.id), true);
-  assert.equal(await db.collection('articleImages.files').countDocuments(), 1);
+  assert.equal(remoteImages.has(withImage.images[0].imagekitFileId), true);
 });
 
 test('top articles keep a compact order across Explore pages and categories', async () => {
@@ -183,4 +209,30 @@ test('top articles keep a compact order across Explore pages and categories', as
   assert.equal(secondPage[0].topPosition, 13);
   assert.equal((await admin.get('/api/admin/articles?top=only&limit=12&page=2').expect(200)).body.articles[0].topPosition, 13);
   assert.deepEqual((await request(app).get('/api/storefront').expect(200)).body.featured.map(a => a.id), [ids[1], ids[0], ...ids.slice(3, 7)]);
+});
+
+test('migration updates shared article and storefront references before removing GridFS bytes', async () => {
+  const png = await sharp({ create: { width: 20, height: 20, channels: 3, background: '#223344' } }).png().toBuffer();
+  const articleId = new ObjectId();
+  const [legacy] = await saveLegacyImages([{ buffer: png }], articleId);
+  await db.collection('articles').insertOne({ _id: articleId, images: [legacy], version: 1 });
+  await db.collection('storefront').updateOne({ _id: 'main' }, { $set: { storyImage: legacy } });
+  await request(app).get(`/api/images/${legacy.fileId}`).expect(200);
+  const references = (await scanLegacyImages(db)).filter(item => item.image.fileId.toString() === legacy.fileId.toString());
+  assert.equal(references.length, 2);
+  const initialRemoteCount = remoteImages.size;
+  assert.equal(await migrateReference(db, references[0].collection, references[0].documentId, references[0]), true);
+  assert.equal(await cleanupMigratedLegacy(db), 0);
+  assert.equal(await db.collection('articleImages.files').countDocuments({ _id: legacy.fileId }), 1);
+  assert.equal(await migrateReference(db, references[1].collection, references[1].documentId, references[1]), true);
+  assert.equal(await cleanupMigratedLegacy(db), 1);
+  assert.equal(await db.collection('articleImages.files').countDocuments({ _id: legacy.fileId }), 0);
+  await request(app).get(`/api/images/${legacy.fileId}`).expect(404);
+  const migrated = await db.collection('articles').findOne({ _id: articleId });
+  const storefront = await db.collection('storefront').findOne({ _id: 'main' });
+  assert.equal(migrated.images[0].type, 'url');
+  assert.deepEqual(migrated.images[0], storefront.storyImage);
+  assert.equal(remoteImages.size, initialRemoteCount + 1);
+  assert.equal((await scanLegacyImages(db)).length, 0);
+  assert.equal(await cleanupMigratedLegacy(db), 0);
 });
