@@ -425,7 +425,6 @@ export default function Storefront() {
                 <CategoryAvatarStrip category={category} onSelect={cat => browse(cat === category ? '' : cat)} />
                 <div className="catalogue-toolbar">
                   <div className="catalogue-count">
-                    <span>{catalogue.total || articles.length} articles</span>
                     {category && (
                       <button
                         type="button"
@@ -490,11 +489,7 @@ export default function Storefront() {
                       <div className="shop-product-details">
                         <div className="product-collection-name">{settings.slides.find(s => s.id === article.category)?.label} <span>Size {article.size}</span></div>
                         <h3><button onClick={() => viewArticle(article)}>{article.name}</button></h3>
-                        <div>
-                          <strong>{money(salePrice(article))}</strong>
-                          {Number(article.discount) > 0 && <del>{money(article.price)}</del>}
-                          {article.quantity === 0 ? <span className="product-stock-out">Sold out</span> : article.quantity <= 5 && <span className="product-stock-low">Only {article.quantity} left</span>}
-                        </div>
+                        <ProductPrice article={article} />
                       </div>
                     </article>
                   ))}
@@ -717,11 +712,7 @@ function FeaturedArticles({ settings, featured, onBrowse, onArticle, onAdd, save
                 <div className="shop-product-details">
                   <div className="product-collection-name">{settings.slides.find(s => s.id === article.category)?.label || `All styles`} <span>Size {article.size}</span></div>
                   <h3><button onClick={() => onArticle(article)}>{article.name}</button></h3>
-                  <div>
-                    <strong>{money(salePrice(article))}</strong>
-                    {Number(article.discount) > 0 && <del>{money(article.price)}</del>}
-                    {article.quantity === 0 ? <span className="product-stock-out">Sold out</span> : article.quantity <= 5 && <span className="product-stock-low">Only {article.quantity} left</span>}
-                  </div>
+                  <ProductPrice article={article} />
                 </div>
               </article>
             ))}
@@ -736,6 +727,11 @@ function FeaturedArticles({ settings, featured, onBrowse, onArticle, onAdd, save
       )}
     </section>
   );
+}
+
+function ProductPrice({ article }) {
+  const discounted = Number(article.discount) > 0;
+  return <div className="product-price-row"><div className="product-price-stack"><strong>{money(salePrice(article))}</strong>{discounted ? <del>{money(article.price)}</del> : <span className="price-placeholder" aria-hidden="true">&nbsp;</span>}</div>{article.quantity === 0 ? <span className="product-stock-out">Sold out</span> : article.quantity <= 5 && <span className="product-stock-low">Only {article.quantity} left</span>}</div>;
 }
 
 function ProductImage({ article, onOpen }) {
