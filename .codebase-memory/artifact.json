@@ -1,11 +1,11 @@
 {
     "schema_version": 2,
-    "commit": "231775dcd6186b2e174a713e6fd04a29c5fb5f90",
-    "indexed_at": "2026-09-27T13:45:51Z",
+    "commit": "54b689816d520a12c1fa795500825f39676af39c",
+    "indexed_at": "2026-09-27T15:28:32Z",
     "project": "C-Users-arifa-OneDrive-Documents-project-fashion_hub_project",
     "nodes": 571,
-    "edges": 1310,
-    "original_size": 3538944,
-    "compressed_size": 495062,
+    "edges": 1325,
+    "original_size": 3473408,
+    "compressed_size": 501659,
     "compression_level": 9
 }

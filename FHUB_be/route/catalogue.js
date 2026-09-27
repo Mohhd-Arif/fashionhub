@@ -43,13 +43,18 @@ router.get('/articles', async (req, res) => {
   }
   const page = Number(req.query.page || 1), limit = 12;
   if (!Number.isInteger(page) || page < 1 || page > 100000) fail('Invalid page.');
-  const sorts = { newest: { createdAt: -1, _id: -1 }, low: { price: 1, _id: -1 }, high: { price: -1, _id: -1 } };
+  const sorts = { newest: { createdAt: -1, _id: -1 }, low: { salePrice: 1, _id: -1 }, high: { salePrice: -1, _id: -1 } };
   if (req.query.sort && !Object.hasOwn(sorts, req.query.sort)) fail('Invalid sorting option.');
   const topIds = await getTopIds();
   const topObjectIds = topIds.map(objectId);
+  const sort = req.query.sort || 'newest';
+  const priceSort = sort === 'low' || sort === 'high';
   const ordering = [{ $match: filter }, { $addFields: { topIndex: { $indexOfArray: [topObjectIds, '$_id'] } } },
-    { $addFields: { topGroup: { $cond: [{ $gte: ['$topIndex', 0] }, 0, 1] } } },
-    { $sort: { topGroup: 1, topIndex: 1, ...sorts[req.query.sort || 'newest'] } },
+    { $addFields: {
+      topGroup: { $cond: [{ $gte: ['$topIndex', 0] }, 0, 1] },
+      salePrice: { $multiply: ['$price', { $subtract: [1, { $divide: [{ $ifNull: ['$discount', 0] }, 100] }] }] }
+    } },
+    { $sort: priceSort ? sorts[sort] : { topGroup: 1, topIndex: 1, ...sorts[sort] } },
     { $skip: (page - 1) * limit }, { $limit: limit }];
   const [items, total] = await Promise.all([getDatabase().collection('articles').aggregate(ordering).toArray(), getDatabase().collection('articles').countDocuments(filter)]);
   res.json({ articles: items.map(item => serialize(item, item.topIndex >= 0 ? item.topIndex + 1 : null)), total, page, pages: Math.max(1, Math.ceil(total / limit)) });

@@ -1,3 +1,4 @@
+import ThemedSelect from '../components/ThemedSelect';
 import { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, ArrowUpRight, Check, ChevronLeft, ChevronRight, Clock, Heart, Home, Image, Leaf, LoaderCircle, LogOut, MapPin, Megaphone, Menu, MessageCircle, Minus, Package, Phone, Plus, Search, Shirt, ShoppingBag, SlidersHorizontal, Sparkles, User, X } from 'lucide-react';
 import { api } from '../admin/api';
@@ -439,11 +440,11 @@ export default function Storefront() {
                   </div>
                   <label className="shop-sort">
                     <SlidersHorizontal size={14} />
-                    <select aria-label="Sort articles" value={sort} onChange={e => { setSort(e.target.value); setPage(1); }}>
+                    <ThemedSelect aria-label="Sort articles" value={sort} onChange={e => { setSort(e.target.value); setPage(1); }}>
                       <option value="newest">Newest arrivals</option>
                       <option value="low">Price: low to high</option>
                       <option value="high">Price: high to low</option>
-                    </select>
+                    </ThemedSelect>
                   </label>
                 </div>
               </div>
@@ -854,11 +855,25 @@ function ProductImage({ article, onOpen }) {
   );
 }
 
-function ShopModal({ title, children, onClose, className = '' }) {
+function ShopModal({ title, children, onClose, className = '', closeDisabled = false }) {
   const ref = useRef(null);
-  const closer = useRef(onClose); closer.current = onClose;
+  const [closing, setClosing] = useState(false);
+  const closeTimer = useRef(null);
+  const onCloseRef = useRef(onClose); onCloseRef.current = onClose;
+  const animated = className.split(' ').includes('product-modal');
+  function requestClose() {
+    if (closeDisabled || closeTimer.current !== null) return;
+    if (!animated || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      onCloseRef.current();
+      return;
+    }
+    setClosing(true);
+    closeTimer.current = setTimeout(() => onCloseRef.current(), 180);
+  }
+  const closer = useRef(requestClose); closer.current = requestClose;
   useEffect(() => {
     const oldFocus = document.activeElement;
+    const oldOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     ref.current.querySelector('button').focus();
     function key(e) {
@@ -872,9 +887,9 @@ function ShopModal({ title, children, onClose, className = '' }) {
       }
     }
     document.addEventListener('keydown', key);
-    return () => { document.body.style.overflow = ''; document.removeEventListener('keydown', key); oldFocus.focus(); };
+    return () => { clearTimeout(closeTimer.current); document.body.style.overflow = oldOverflow; document.removeEventListener('keydown', key); if (oldFocus?.isConnected) oldFocus.focus(); };
   }, []);
-  return <div className={`shop-overlay ${className}`} onClick={onClose}><section ref={ref} className="shop-dialog" role="dialog" aria-modal="true" aria-labelledby="shop-dialog-title" onClick={e => e.stopPropagation()}><div className="shop-dialog-heading"><h2 id="shop-dialog-title">{title}</h2><button aria-label="Close dialog" onClick={onClose}><X size={22} /></button></div>{children}</section></div>;
+  return <div className={`shop-overlay ${className} ${closing ? 'is-closing' : ''}`} onClick={requestClose}><section ref={ref} className="shop-dialog" role="dialog" aria-modal="true" aria-labelledby="shop-dialog-title" onClick={e => e.stopPropagation()}><div className="shop-dialog-heading"><h2 id="shop-dialog-title">{title}</h2><button aria-label="Close dialog" disabled={closeDisabled || closing} onClick={requestClose}><X size={22} /></button></div>{children}</section></div>;
 }
 
 function ProductDialog({ article, onClose, onAdd, isSaved = false, onToggleSave }) {
@@ -917,7 +932,7 @@ function ProductDialog({ article, onClose, onAdd, isSaved = false, onToggleSave 
   };
 
   return (
-    <ShopModal title="Product Details" onClose={() => !busy && onClose()} className="product-modal">
+    <ShopModal title="Product Details" onClose={onClose} closeDisabled={busy} className="product-modal">
       <div className="shop-detail">
         <div className="shop-detail-gallery">
           <div

@@ -6995,6 +6995,26 @@
   padding-top: 0 !important;
   border-top: 0;
 }
+.product-modal { animation: product-overlay-in 240ms ease both; }
+.product-modal .shop-dialog { animation: product-dialog-in 240ms cubic-bezier(.2,.75,.25,1) both; }
+.product-modal.is-closing { animation: product-overlay-out 180ms ease both; }
+.product-modal.is-closing .shop-dialog {
+  animation: product-dialog-out 180ms ease both;
+  pointer-events: none;
+}
+@keyframes product-overlay-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes product-overlay-out { from { opacity: 1; } to { opacity: 0; } }
+@keyframes product-dialog-in {
+  from { opacity: 0; transform: translateY(16px) scale(.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes product-dialog-out {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: 0; transform: translateY(10px) scale(.98); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .product-modal, .product-modal .shop-dialog { animation: none !important; }
+}
 .product-price-stack { display: grid; grid-template-rows: auto 12px; min-width: 0; }
 .product-price-stack strong { white-space: nowrap; line-height: 1.45; }
 .product-price-stack del,.product-price-stack .price-placeholder { line-height: 1.25; }
