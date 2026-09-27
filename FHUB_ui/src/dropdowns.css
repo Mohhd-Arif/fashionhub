@@ -64,6 +64,24 @@
   .theme-select, .shop-sort .theme-select, .theme-select-option { font-size: 16px; }
   .inventory-filters .theme-select { flex: 1 1 calc(50% - 6px); }
 }
+.shop-sort .theme-select.theme-select-compact {
+  min-height: 34px;
+  padding: 6px 9px;
+  gap: 8px;
+  border-radius: 9px;
+  font-size: 12px;
+  max-width: 185px;
+}
+.theme-select-compact > svg { width: 14px; height: 14px; }
+.theme-select-popup-compact { padding: 4px; border-radius: 10px; }
+.theme-select-popup-compact .theme-select-option {
+  min-height: 36px;
+  padding: 8px 9px;
+  gap: 8px;
+  border-radius: 7px;
+  font-size: 12px;
+}
+.theme-select-popup-compact .theme-select-option > svg { width: 14px; height: 14px; }
 @media (prefers-reduced-motion: reduce) {
   .theme-select > svg { transition: none; }
 }

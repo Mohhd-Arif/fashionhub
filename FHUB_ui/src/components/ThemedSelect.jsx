@@ -2,7 +2,7 @@ import { Children, useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Check, ChevronDown } from 'lucide-react';
 
-export default function ThemedSelect({ children, value, onChange, name, disabled, ...props }) {
+export default function ThemedSelect({ children, value, onChange, name, disabled, compact = false, ...props }) {
   const options = Children.toArray(children).filter(Boolean).map(child => ({
     value: String(child.props.value ?? child.props.children),
     label: child.props.children,
@@ -23,7 +23,7 @@ export default function ThemedSelect({ children, value, onChange, name, disabled
     const below = window.innerHeight - rect.bottom - 16;
     const above = rect.top - 16;
     const upwards = below < 180 && above > below;
-    const width = Math.min(Math.max(rect.width, 190), window.innerWidth - 24);
+    const width = Math.min(Math.max(rect.width, compact ? 165 : 190), window.innerWidth - 24);
     setPosition({ position: 'fixed', width, left: Math.max(12, Math.min(rect.left, window.innerWidth - width - 12)),
       ...(upwards ? { bottom: window.innerHeight - rect.top + 6 } : { top: rect.bottom + 6 }),
       maxHeight: Math.max(44, Math.min(300, upwards ? above : below)) });
@@ -85,14 +85,14 @@ export default function ThemedSelect({ children, value, onChange, name, disabled
 
   return <>
     {name && <input type="hidden" name={name} value={value ?? ''} disabled={disabled} />}
-    <button {...props} ref={trigger} type="button" className={`theme-select ${props.className || ''}`}
+    <button {...props} ref={trigger} type="button" className={`theme-select ${compact ? 'theme-select-compact' : ''} ${props.className || ''}`}
       role="combobox" aria-haspopup="listbox" aria-expanded={open} aria-controls={open ? id : undefined}
       aria-activedescendant={open ? `${id}-${active}` : undefined} disabled={disabled}
       onKeyDown={keyDown} onClick={() => open ? setOpen(false) : show()}>
       <span>{options[selected]?.label || 'Select an option'}</span><ChevronDown size={16} />
     </button>
     {open && createPortal(<div ref={popup} id={id} role="listbox" aria-label={props['aria-label'] || name || 'Options'}
-      className="theme-select-popup" style={position} onClick={event => event.stopPropagation()}>
+      className={`theme-select-popup ${compact ? 'theme-select-popup-compact' : ''}`} style={position} onClick={event => event.stopPropagation()}>
       {options.map((option, index) => <div key={option.value} id={`${id}-${index}`} data-index={index}
         role="option" aria-selected={index === selected} aria-disabled={option.disabled || undefined}
         className={`theme-select-option ${index === active ? 'is-active' : ''}`}

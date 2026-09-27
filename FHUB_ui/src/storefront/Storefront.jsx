@@ -440,7 +440,7 @@ export default function Storefront() {
                   </div>
                   <label className="shop-sort">
                     <SlidersHorizontal size={14} />
-                    <ThemedSelect aria-label="Sort articles" value={sort} onChange={e => { setSort(e.target.value); setPage(1); }}>
+                    <ThemedSelect compact aria-label="Sort articles" value={sort} onChange={e => { setSort(e.target.value); setPage(1); }}>
                       <option value="newest">Newest arrivals</option>
                       <option value="low">Price: low to high</option>
                       <option value="high">Price: high to low</option>
