@@ -1,0 +1,13 @@
+.git
+.codebase-memory
+node_modules
+**/node_modules
+**/dist
+**/.env
+**/.env.*
+**/test-results
+**/playwright-report
+**/*.log
+FHUB_be/tests
+FHUB_ui/tests
+admin-brand-result.png

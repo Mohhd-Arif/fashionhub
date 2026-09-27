@@ -10,6 +10,7 @@ const app = require('./index');
 const { connectDatabase, closeDatabase } = require('./config/database');
 const { ensureIndexes } = require('./config/indexes');
 const { hashPassword } = require('./service/auth');
+const { getStorefront } = require('./service/storefront');
 const { saveImages } = require('./service/images');
 const { ObjectId, Decimal128 } = require('mongodb');
 const sharp = require('sharp');
@@ -35,7 +36,7 @@ test.afterAll(async () => {
   try {
     if (server) await new Promise(resolve => server.close(resolve));
     if (db?.databaseName === testDatabase && /^fhub_test_[a-f\d]{16}$/.test(testDatabase)) {
-      for (const name of ['users', 'sessions', 'articles', 'articleImages.files', 'articleImages.chunks', 'imageCleanup', 'storefront']) await db.collection(name).deleteMany({});
+      for (const name of ['users', 'sessions', 'articles', 'articleRanking', 'articleImages.files', 'articleImages.chunks', 'imageCleanup', 'storefront']) await db.collection(name).deleteMany({});
     }
   } finally { await closeDatabase(); }
 });
@@ -68,6 +69,104 @@ async function signIn(page) {
   await expect(page.getByRole('heading', { name: 'Your collection, at a glance.' })).toBeVisible();
   await expect(page.locator('.inventory-table tbody tr')).toHaveCount(4);
 }
+
+test('top article filter and action buttons fit on narrow phones', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 844 });
+  await signIn(page);
+  const row = page.getByRole('row').filter({ hasText: 'Everyday linen shirt' });
+  await page.evaluate(() => {
+    window.inventoryListRemoved = false;
+    new MutationObserver(records => {
+      if (records.some(record => [...record.removedNodes].some(node => node.nodeType === 1 && (node.matches?.('.inventory-table-scroll') || node.querySelector?.('.inventory-table-scroll'))))) window.inventoryListRemoved = true;
+    }).observe(document.querySelector('.inventory-panel'), { childList: true, subtree: true });
+  });
+  await row.getByRole('button', { name: 'Add Everyday linen shirt to top articles' }).click();
+  await expect(row.getByRole('button', { name: /Remove #1 Everyday linen shirt from top/ })).toBeVisible();
+  await page.waitForTimeout(350);
+  expect(await page.evaluate(() => window.inventoryListRemoved)).toBe(false);
+  await page.getByLabel('Filter by priority').selectOption('only');
+  await expect(page.getByRole('heading', { name: /Top articles/ })).toBeVisible();
+  await expect(page.locator('.inventory-table tbody tr')).toHaveCount(1);
+  for (const width of [320, 390]) {
+    await page.setViewportSize({ width, height: 844 });
+    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await expect(page.getByRole('button', { name: 'Articles', exact: true })).toBeVisible();
+    expect(await row.locator('.col-price').evaluate(el => getComputedStyle(el, '::before').content)).toBe('"Price"');
+    expect(await row.locator('.col-discount').evaluate(el => getComputedStyle(el, '::before').content)).toBe('"Discount"');
+    for (const button of await row.locator('.row-actions button').all()) {
+      const box = await button.boundingBox();
+      expect(box.x).toBeGreaterThanOrEqual(0);
+      expect(box.x + box.width).toBeLessThanOrEqual(width);
+    }
+  }
+  for (const width of [768, 878, 1440]) {
+    await page.setViewportSize({ width, height: 844 });
+    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    if (width < 1100) await expect(page.locator('.inventory-table thead')).toBeHidden();
+    else await expect(page.locator('.inventory-table thead')).toBeVisible();
+    expect(await page.locator('.admin-sidebar .admin-brand-name').evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
+    if (width === 768) {
+      const header = await page.locator('.admin-sidebar').boundingBox();
+      const breadcrumb = await page.locator('.admin-topbar').boundingBox();
+      expect(breadcrumb.y).toBeGreaterThanOrEqual(header.y + header.height - 1);
+    }
+  }
+  await page.setViewportSize({ width: 390, height: 844 });
+  await row.getByRole('button', { name: /Remove #1 Everyday linen shirt from top/ }).click();
+  await expect(page.getByRole('heading', { name: 'No matching articles.' })).toBeVisible();
+  await page.goto('/explore');
+  await expect(page.locator('.shop-products .shop-product')).toHaveCount(4);
+  await page.evaluate(() => {
+    window.exploreListRemoved = false;
+    new MutationObserver(records => {
+      if (records.some(record => [...record.removedNodes].some(node => node.nodeType === 1 && (node.matches?.('.shop-products') || node.querySelector?.('.shop-products'))))) window.exploreListRemoved = true;
+    }).observe(document.querySelector('.catalogue-section'), { childList: true, subtree: true });
+  });
+  await page.getByRole('button', { name: 'Save Everyday linen shirt' }).click();
+  await expect(page.getByRole('button', { name: 'Unsave Everyday linen shirt' })).toBeVisible();
+  await page.waitForTimeout(350);
+  expect(await page.evaluate(() => window.exploreListRemoved)).toBe(false);
+  await page.getByRole('navigation', { name: 'Mobile shopping' }).getByRole('button', { name: /^Saved/ }).click();
+  await expect(page.locator('.catalogue-section .shop-product')).toHaveCount(1);
+  await page.getByRole('button', { name: 'Unsave Everyday linen shirt' }).click();
+  await expect(page.getByRole('heading', { name: 'Your saved collection is empty.' })).toBeVisible();
+});
+
+test('contact card actions align with the address on mobile and desktop', async ({ page }) => {
+  const previous = await db.collection('storefront').findOne({ _id: 'main' });
+  await db.collection('storefront').replaceOne({ _id: 'main' }, {
+    ...(previous || await getStorefront()), _id: 'main',
+    address: 'Turkauliya Pani Tanki Road East Champaran Bihar-845437',
+    hours: '08:00–21:30', phone: '+919330820717'
+  }, { upsert: true });
+  try {
+    for (const width of [320, 390, 768, 1200]) {
+      await page.setViewportSize({ width, height: 844 });
+      await page.goto('/');
+      await expect(page.locator('.contact-card-actions > *')).toHaveCount(3);
+      if (width === 320) expect((await page.locator('.contact-hours strong').boundingBox()).height).toBeLessThan(19);
+      const edges = await page.evaluate(() => {
+        const address = document.querySelector('.contact-address').getBoundingClientRect();
+        const actions = document.querySelector('.contact-card-actions').getBoundingClientRect();
+        const tiles = [...document.querySelectorAll('.contact-card-actions > *')].map(el => el.getBoundingClientRect());
+        return { leftGap: actions.left - address.left, rightGap: address.right - actions.right, tilesFit: tiles.every(tile => tile.left >= actions.left && tile.right <= actions.right) };
+      });
+      expect(Math.abs(edges.leftGap)).toBeLessThan(2);
+      expect(Math.abs(edges.rightGap)).toBeLessThan(2);
+      expect(edges.tilesFit).toBe(true);
+      await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    }
+    await db.collection('storefront').updateOne({ _id: 'main' }, { $set: { hours: '', phone: '' } });
+    await page.setViewportSize({ width: 320, height: 844 });
+    await page.goto('/');
+    await expect(page.locator('.contact-card-actions > *')).toHaveCount(1);
+    const onlyActionGap = await page.evaluate(() => document.querySelector('.contact-address').getBoundingClientRect().right - document.querySelector('.contact-whatsapp-btn').getBoundingClientRect().right);
+    expect(Math.abs(onlyActionGap)).toBeLessThan(2);
+  } finally {
+    if (previous) await db.collection('storefront').replaceOne({ _id: 'main' }, previous);
+    else await db.collection('storefront').deleteOne({ _id: 'main' });
+  }
+});
 
 test('admin login, image upload, edit, filters, persistent session and delete', async ({ page }) => {
   test.setTimeout(90000);

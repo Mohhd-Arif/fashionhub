@@ -16,6 +16,7 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "vite build",
+    "build:backend": "node scripts/build-and-copy.js",
     "preview": "vite preview --host 0.0.0.0",
     "test": "playwright test"
   }

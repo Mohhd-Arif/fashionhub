@@ -19,3 +19,179 @@
 .crop-selector{background:#111!important;cursor:crosshair}.crop-selector img{width:100%;height:100%;object-fit:contain!important;background:#111}.crop-layer{position:absolute;overflow:hidden}.crop-layer .crop-shade{position:absolute;background:#0000005c;pointer-events:none}.crop-box{position:absolute;border:2px dashed #19c98f;background:#19c98f0a;cursor:move;touch-action:none;z-index:2}.crop-handle{z-index:3}.crop-tools{display:none!important}.crop-hint{left:12px;bottom:12px;max-width:calc(100% - 24px);z-index:4}
 
 .crop-selector{height:auto!important;min-height:0!important;overflow:visible!important;background:#111!important}.crop-selector>img{display:block!important;width:100%!important;height:auto!important;max-height:none!important;object-fit:contain!important}.crop-layer{pointer-events:none}.crop-box,.crop-handle{pointer-events:auto}.cms-image{overflow:visible}.cms-slide-layout{align-items:start}
+
+
+.admin-app{--a-text:#1f1110!important;--a-muted:#5f4642!important;color:#1f1110!important;font-weight:600}.admin-app p,.admin-app small,.admin-app span,.admin-app label,.admin-app td,.admin-app th,.admin-app input,.admin-app select,.admin-app textarea,.admin-app button{font-weight:650}.inventory-title p,.inventory-panel-heading p,.cms-heading p,.login-form>p,.sidebar-note p,.stat-card>small,.storefront-editor label small,.image-help,.editor-intro,.inventory-bottom,.login-secure,.login-switch,.admin-topbar{color:#5a403c!important}.a-eyebrow,.workspace-label,.inventory-table th,.product-collection-name{color:#8f211d!important;font-weight:900!important}.inventory-title h1,.login-form h2,.cms-heading h2,.editor-heading h2,.account-card h1,.stat-card>strong,.inventory-panel-heading h2{color:#1f1110!important;font-weight:850!important}.article-cell strong,.table-price,.size-tag,.stock-tag,.discount-tag,.sidebar-user strong,.account-card p,.delete-dialog p{color:#241413!important;font-weight:750!important}.admin-app input:not([type=file]),.admin-app select,.admin-app textarea{color:#20100f!important;background:#fff!important;border-color:#d8aaa3!important;font-weight:700!important}.admin-app input::placeholder,.admin-app textarea::placeholder{color:#7a5d58!important;opacity:1}.storefront-editor label,.article-editor label,.login-form label{color:#3a2421!important;font-weight:800!important}.cms-image-note{color:#543a36!important;font-weight:750}.admin-sidebar nav button,.admin-sidebar nav a{color:#3e2925!important;font-weight:800}.admin-sidebar nav button.sidebar-active{color:#a71918!important}.muted{color:#5c4641!important;font-weight:700}.article-editor select option{color:#1f1110;background:#fff}@media(max-width:600px){.admin-app{font-size:14px}.inventory-title p,.inventory-panel-heading p,.cms-heading p,.storefront-editor label small,.image-help,.editor-intro{font-size:11.5px!important;line-height:1.8}.admin-app input:not([type=file]),.admin-app select,.admin-app textarea{font-size:16px!important}.inventory-table td:before{color:#7a2c27!important;font-weight:900}.article-cell strong{font-size:13px!important}.size-tag,.stock-tag,.table-price,.discount-tag{font-size:11px!important}.admin-sidebar nav button{font-weight:850}}
+
+.size-chip-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px;margin-bottom:9px}.size-chip-grid button{border:1px solid #d8aaa3;background:#fff8f6;color:#301715;border-radius:8px;min-height:38px;padding:8px;font-size:11px;font-weight:850}.size-chip-grid button.active{background:#a71918;color:#fff;border-color:#a71918;box-shadow:0 8px 18px #a7191820}.size-custom-field input{margin-top:0!important}@media(max-width:520px){.size-chip-grid{grid-template-columns:repeat(3,1fr)}.size-chip-grid button{font-size:12px;min-height:40px}}
+
+@media(max-width:600px){
+  .inventory-table tbody{padding:0 18px}
+  .inventory-table tbody tr{grid-template-columns:1fr 1fr;gap:4px 18px;padding:22px 0;border-top:1px solid #efd7d2}
+  .inventory-table td{font-size:14px!important;line-height:1.45;color:#241413!important}
+  .inventory-table td:before{font-size:10.5px!important;letter-spacing:.25px;margin-bottom:9px;color:#8f211d!important;font-weight:950!important;text-transform:none}
+  .inventory-table td:first-child{padding-bottom:16px!important}
+  .article-cell{gap:14px;align-items:center}
+  .article-cell img,.article-placeholder{width:58px;height:68px;border-radius:8px}
+  .article-cell strong{font-size:16px!important;line-height:1.35;font-weight:900!important;color:#1f1110!important;letter-spacing:-.25px}
+  .article-cell small{font-size:11px!important;margin-top:7px;color:#6b504b!important;font-weight:850!important;letter-spacing:.2px}
+  .size-tag{font-size:13px!important;line-height:1.3;padding:8px 10px;border-radius:7px;background:#fffaf7;border-color:#ead0cb;color:#1f1110!important;font-weight:900!important;max-width:100%;word-break:break-word}
+  .stock-tag{font-size:13px!important;line-height:1.3;padding:8px 10px;border-radius:7px;font-weight:900!important;color:#4e250f!important;background:#fff1e2!important}
+  .stock-tag.out{color:#87231f!important;background:#ffe5df!important}
+  .stock-tag.low{color:#7c4e05!important;background:#fff1cf!important}
+  .stock-tag i{width:6px;height:6px}
+  .table-price{font-size:14px!important;line-height:1.35;font-weight:950!important;color:#1f1110!important}
+  .discount-tag,.muted{font-size:13px!important;line-height:1.35;font-weight:850!important;color:#33201d!important}
+  .row-actions{gap:10px}
+  .row-actions button{width:45px;height:45px;border-radius:10px;background:#fffdfb}
+}
+
+.admin-brand-pill{display:inline-flex!important;align-items:center;gap:10px;width:100%;max-width:100%;box-sizing:border-box;padding:7px 14px 7px 7px;border-radius:16px;background:linear-gradient(135deg,#ffffff 0%,#fff7f4 50%,#ffece7 100%);box-shadow:0 4px 18px rgba(167,25,24,.08);border:1px solid #f2cfc8;color:#2f1515!important;text-decoration:none;letter-spacing:0!important;line-height:1!important;transition:all .2s ease}
+.admin-brand-pill:hover{background:linear-gradient(135deg,#ffffff 0%,#fff3ef 50%,#ffe3dc 100%);border-color:#ebb9b0;box-shadow:0 6px 22px rgba(167,25,24,.12)}
+.admin-logo-mark{width:44px;height:44px;min-width:44px;border-radius:13px;background:#090909;padding:2.5px;display:grid;place-items:center;box-shadow:0 4px 14px rgba(167,25,24,.18),0 0 0 1px #f6c8c1;overflow:hidden;box-sizing:border-box}
+.admin-logo-mark img{width:100%;height:100%;object-fit:cover;border-radius:10px;display:block}
+.admin-brand-name{font-family:'Manrope',sans-serif!important;font-size:22px!important;font-weight:850!important;letter-spacing:-.8px!important;line-height:1;color:#2f1515!important;white-space:nowrap;display:flex!important;align-items:center!important;gap:5px!important}
+.admin-brand-name span{color:#a71918!important;font-weight:850!important}
+.admin-brand-pill i{display:none!important}
+.admin-sidebar{background:#fff8f6!important}
+.admin-topbar{background:#fff8f6f2!important;backdrop-filter:blur(14px);box-shadow:0 10px 30px #2f15150c;position:sticky;top:0;z-index:20}
+.login-story .admin-brand-pill,.account-page .admin-brand-pill{margin-left:0}
+@media(max-width:800px){.admin-sidebar{position:sticky!important;top:0;z-index:70;background:#fff8f6f2!important;backdrop-filter:blur(14px);box-shadow:0 10px 30px #2f15150c}.admin-sidebar .admin-brand-pill{margin:0!important}.admin-logo-mark{width:44px;height:44px;min-width:44px;border-radius:13px}.admin-logo-mark img{border-radius:10px}.admin-brand-name{font-size:23px!important;letter-spacing:-.9px!important}.admin-brand-pill{padding:6px 9px 6px 6px;border-radius:15px;gap:8px}.admin-topbar{top:80px}}
+@media(max-width:600px){.admin-sidebar{align-items:center;padding:10px 4%!important;min-height:68px;gap:8px}.admin-sidebar .admin-brand-pill{max-width:52vw;min-width:0;padding:5px 8px 5px 5px;border-radius:14px;gap:7px;flex-shrink:1}.admin-logo-mark{width:38px!important;height:38px!important;min-width:38px;border-radius:11px;padding:2px}.admin-logo-mark img{border-radius:9px}.admin-brand-name{font-size:19px!important;letter-spacing:-.8px!important;overflow:hidden;text-overflow:ellipsis;min-width:0;max-width:135px}.admin-sidebar nav{margin-left:auto;flex:0 0 auto;gap:4px}.admin-sidebar nav button{min-height:38px;padding:7px 9px!important;border-radius:10px}.admin-topbar{top:68px;height:48px}.login-story .admin-brand-pill{max-width:max-content}.account-page .admin-brand-name{max-width:none}}
+@media(max-width:380px){.admin-brand-name{max-width:110px;font-size:17px!important}.admin-sidebar .admin-brand-pill{max-width:50vw}.admin-logo-mark{width:35px!important;height:35px!important;min-width:35px}.admin-sidebar nav button{padding:7px!important}}
+
+.editor-images{min-height:96px;align-items:flex-start}
+.editor-image{display:block;overflow:hidden;background:#fff4f1!important;border-color:#efc8c1!important;box-shadow:0 8px 22px #b7191810}
+.editor-image img{display:block!important;width:100%!important;height:100%!important;object-fit:contain!important;background:#fff8f6!important;border-radius:6px}
+.editor-image button{z-index:2}
+.cms-image .crop-selector img[src^="blob:"],.editor-image img[src^="blob:"]{opacity:1!important;visibility:visible!important}
+.cms-image .crop-selector{min-height:180px}
+
+.inventory-table td.no-discount{color:transparent!important}
+@media(max-width:600px){.inventory-table td.no-discount{display:none!important}}
+
+@media(min-width:801px){
+  .admin-sidebar .admin-brand-pill{width:100%;max-width:100%;box-sizing:border-box;padding:7px 12px 7px 7px;border-radius:16px;gap:10px}
+  .admin-sidebar .admin-logo-mark{width:44px;height:44px;min-width:44px;border-radius:13px}
+  .admin-sidebar .admin-brand-name{font-size:22px!important;letter-spacing:-.8px!important;display:flex!important;align-items:center!important;gap:5px!important;color:#2f1515!important}
+  .admin-sidebar .admin-brand-name span{color:#a71918!important;font-weight:850!important}
+}
+@media(min-width:801px) and (max-width:1150px){
+  .admin-sidebar .admin-brand-pill{padding:6px 10px 6px 6px;gap:8px}
+  .admin-sidebar .admin-logo-mark{width:38px;height:38px;min-width:38px;border-radius:11px}
+  .admin-sidebar .admin-brand-name{font-size:19px!important;letter-spacing:-.6px!important}
+}
+
+.panel-actions-wrapper{display:flex;align-items:center;gap:12px}
+.status-tabs{display:flex;background:#f7edea;border:1px solid #ebd0cb;border-radius:8px;padding:3px;gap:3px}
+.status-tab{border:none;background:transparent;color:#5f4642;font-size:11px;font-weight:700;padding:6px 14px;border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all .15s ease}
+.status-tab span{font-size:9px;background:rgba(0,0,0,.06);color:inherit;padding:2px 6px;border-radius:10px;font-weight:800}
+.status-tab.active{background:#a71918;color:#fff!important;box-shadow:0 2px 6px rgba(167,25,24,.25)}
+.status-tab.active span{background:rgba(255,255,255,.25);color:#fff}
+.table-date{font-size:11px;font-weight:700;color:#523b37!important;white-space:nowrap}
+.stock-tag.deleted{background:#ffeae6!important;color:#b71918!important;border:1px solid #f6cfc7;font-weight:800!important}
+.stock-tag.deleted i{background:#b71918!important}
+.row-deleted td{background:#fff8f7}
+.restore-btn{display:inline-flex!important;align-items:center!important;gap:6px!important;background:#f0f6ea!important;color:#3b6326!important;border:1px solid #cadbbd!important;padding:7px 13px!important;border-radius:6px!important;font-size:11px!important;font-weight:750!important;cursor:pointer!important;transition:all .2s ease!important}
+.restore-btn:hover:not(:disabled){background:#3b6326!important;color:#fff!important;border-color:#3b6326!important}
+
+@media(max-width:600px){
+  .inventory-panel-heading{flex-direction:column;align-items:flex-start;gap:14px}
+  .panel-actions-wrapper{width:100%;justify-content:space-between}
+  .status-tabs{flex:1}
+  .status-tab{flex:1;justify-content:center;padding:8px 6px;font-size:11px}
+  .inventory-table td.col-date:before{content:'Added on'!important;display:block!important;font-size:10.5px!important;margin-bottom:9px!important;color:#8f211d!important;font-weight:950!important}
+  .restore-btn{width:100%!important;justify-content:center!important;padding:10px!important;font-size:12px!important}
+}
+
+.row-actions .top-pin{display:inline-flex;align-items:center;gap:4px;color:#9e211d;border:1px solid #edd5ce;background:#fff8f6;padding:7px 9px;font-weight:850}
+.row-actions .top-pin.active{background:#a71918;color:#fff;border-color:#a71918}
+.row-actions .top-pin.active{min-width:54px;width:auto!important}
+.editor-top-rank{display:flex;align-items:end;gap:12px;background:#fff6f3;border:1px solid #f0d4cc;padding:14px;border-radius:9px;margin-bottom:20px}
+.editor-top-rank label{flex:1;margin:0}
+.editor-top-rank .a-button{flex-shrink:0}
+@media(max-width:600px){.editor-top-rank{flex-direction:column;align-items:stretch}.editor-top-rank label,.editor-top-rank .a-button{width:100%}}
+
+@media(max-width:600px){
+  .inventory-filters select{flex:1 1 calc(50% - 6px);min-width:0;max-width:none}
+  .inventory-table td.col-actions{grid-column:1/-1;justify-content:flex-end!important;min-width:0;padding-top:8px!important}
+  .inventory-table .row-actions{display:flex;width:auto;max-width:100%;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+  .inventory-table .row-actions button{flex:0 0 auto;width:42px;height:42px;padding:7px}
+  .inventory-table .row-actions .top-pin.active{min-width:58px;width:auto!important;padding:7px 8px}
+  .inventory-table .row-actions .top-pin span{white-space:nowrap;font-size:11px}
+}
+.featured-rank-note{margin-top:18px;padding:13px 15px;border:1px solid #efd3ca;border-radius:9px;background:#fff7f4;color:#503633;font-size:13px;font-weight:700;line-height:1.55}
+
+/* Keep the full store name readable in the admin rail. */
+@media(min-width:801px){
+  .admin-sidebar{width:270px}
+  .admin-main{margin-left:270px}
+  .admin-sidebar .admin-brand-pill{width:100%;min-width:0;margin:0;justify-content:flex-start}
+  .admin-sidebar .admin-brand-name{min-width:0;font-size:22px!important;letter-spacing:-.7px!important;white-space:nowrap}
+  .inventory-main{min-width:0}
+}
+
+/* Tablet inventory uses readable article cards instead of squeezed table columns. */
+@media(min-width:601px) and (max-width:1100px){
+  .admin-sidebar{width:245px}
+  .admin-main{margin-left:245px}
+  .admin-sidebar .admin-brand-name{font-size:20px!important}
+  .inventory-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .inventory-table-scroll{overflow:visible}
+  .inventory-table,.inventory-table tbody{display:block;width:100%;white-space:normal}
+  .inventory-table thead{display:none}
+  .inventory-table tbody{padding:0 20px 20px}
+  .inventory-table tbody tr{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 20px;padding:18px 0;border-top:1px solid #efd7d2}
+  .inventory-table td{display:block;width:auto!important;min-width:0;padding:0!important;border:0;font-size:13px}
+  .inventory-table td.col-article{grid-column:1/-1}
+  .article-cell{max-width:none;min-width:0}
+  .article-cell strong{max-width:none;white-space:normal;overflow-wrap:anywhere;font-size:15px}
+  .inventory-table td.col-actions{grid-column:1/-1;display:flex;justify-content:flex-end}
+  .inventory-table .row-actions button{min-width:42px;min-height:42px;display:grid;place-items:center;border:1px solid #efd7d2;border-radius:8px}
+  .inventory-table td.no-discount{display:none}
+}
+
+@media(max-width:1100px){
+  .inventory-table td.col-collection{grid-column:1;grid-row:2}
+  .inventory-table td.col-size{grid-column:2;grid-row:2}
+  .inventory-table td.col-stock{grid-column:1;grid-row:3}
+  .inventory-table td.col-price{grid-column:2;grid-row:3}
+  .inventory-table td.col-date{grid-column:1;grid-row:4}
+  .inventory-table td.col-discount{grid-column:2;grid-row:4}
+  .inventory-table td.col-actions{grid-column:1/-1;grid-row:5}
+  .inventory-table td.col-collection:before{content:'Collection'}
+  .inventory-table td.col-size:before{content:'Size'}
+  .inventory-table td.col-stock:before{content:'Stock'}
+  .inventory-table td.col-date:before{content:'Added on'}
+  .inventory-table td.col-price:before{content:'Price'}
+  .inventory-table td.col-discount:before{content:'Discount'}
+  .inventory-table td.col-collection:before,.inventory-table td.col-size:before,.inventory-table td.col-stock:before,.inventory-table td.col-date:before,.inventory-table td.col-price:before,.inventory-table td.col-discount:before{display:block;margin-bottom:7px;color:#8f211d;font-size:11px;font-weight:850}
+  .inventory-table .size-tag{max-width:100%;word-break:normal}
+}
+
+@media(min-width:601px) and (max-width:800px){
+  .admin-sidebar{width:100%;height:80px;min-height:80px;margin:0;padding:10px 22px;flex-wrap:nowrap}
+  .admin-main{margin-left:0}
+  .admin-sidebar .admin-brand-pill{width:auto;max-width:none;flex:0 0 auto}
+  .admin-sidebar nav{flex:0 1 auto;flex-wrap:nowrap;margin-left:auto}
+  .admin-topbar{top:80px}
+}
+
+@media(max-width:600px){
+  .inventory-table td.col-date:before{content:'Added on'!important}
+  .inventory-table td.col-price:before{content:'Price'!important}
+  .inventory-table td.col-discount:before{content:'Discount'!important}
+  .inventory-table td.col-price{align-self:start}
+  .inventory-table td.col-actions{padding-top:4px!important}
+}
+
+@media(max-width:480px){
+  .admin-sidebar{flex-wrap:nowrap;min-height:68px;padding:9px 4%!important;gap:6px}
+  .admin-sidebar .admin-brand-pill{flex:0 1 auto;width:auto;max-width:calc(100% - 94px);min-width:0;margin:0!important}
+  .admin-sidebar .admin-brand-name{font-size:18px!important;letter-spacing:-.5px!important;max-width:none;overflow:visible;text-overflow:clip;white-space:nowrap}
+  .admin-sidebar nav{display:flex;flex:0 0 auto;width:auto;flex-wrap:nowrap;gap:4px;margin-left:auto}
+  .admin-sidebar nav button{width:40px;height:40px;min-height:40px;padding:0!important;justify-content:center;font-size:0!important;gap:0}
+  .admin-sidebar nav button svg{width:18px;height:18px;flex:0 0 auto}
+  .admin-topbar{top:68px}
+}
+@media(max-width:380px){.admin-sidebar .admin-brand-name{font-size:16px!important}}
