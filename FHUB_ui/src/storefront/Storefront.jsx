@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, ArrowUpRight, Check, ChevronLeft, ChevronRight, Clock, Heart, Home, Image, Leaf, LoaderCircle, LogOut, MapPin, Megaphone, Menu, MessageCircle, Minus, Package, Phone, Plus, Search, Shirt, ShoppingBag, SlidersHorizontal, Sparkles, User, X } from 'lucide-react';
 import { api } from '../admin/api';
+import { productWhatsAppUrl } from './productShare';
 import './storefront.css';
 
 const money = value => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(Number(value));
@@ -916,7 +917,7 @@ function ProductDialog({ article, onClose, onAdd, isSaved = false, onToggleSave 
   };
 
   return (
-    <ShopModal title="A closer look." onClose={() => !busy && onClose()} className="product-modal">
+    <ShopModal title="Product Details" onClose={() => !busy && onClose()} className="product-modal">
       <div className="shop-detail">
         <div className="shop-detail-gallery">
           <div
@@ -946,6 +947,18 @@ function ProductDialog({ article, onClose, onAdd, isSaved = false, onToggleSave 
               onClick={e => onToggleSave && onToggleSave(article.id, e)}
             >
               <Heart size={20} />
+            </button>
+            <button
+              type="button"
+              className="modal-whatsapp-share"
+
+              aria-label="Enquire about this product on WhatsApp"
+              title="Enquire on WhatsApp"
+              onTouchStart={e => e.stopPropagation()}
+              onTouchEnd={e => e.stopPropagation()}
+              onClick={e => { e.stopPropagation(); window.location.assign(productWhatsAppUrl(article, window.location.origin, whatsappNumber)); }}
+            >
+              <img src="/images/whatsapp-icon.png" alt="" />
             </button>
           </div>
 
