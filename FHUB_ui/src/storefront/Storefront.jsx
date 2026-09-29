@@ -1053,7 +1053,6 @@ function ProductDialog({ article, onClose, onAdd, isSaved = false, onToggleSave 
               <span>{isSaved ? 'Saved' : 'Wishlist'}</span>
             </button>
           </div>
-          <small>Your bag saves your favourites for a store enquiry. Availability is confirmed when you purchase.</small>
         </div>
       </div>
     </ShopModal>

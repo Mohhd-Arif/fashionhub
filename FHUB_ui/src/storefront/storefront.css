@@ -6048,6 +6048,38 @@
   background: #fcfdf8;
 }
 
+/* Detail photos show the whole garment, including tall carousel images. */
+.product-modal .detail-main-image {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 3 / 4;
+  max-height: 65dvh;
+  background: #fff6f4;
+}
+.product-modal .detail-main-image > img,
+.product-modal .detail-main-image .product-image-track img,
+.product-modal .detail-main-image .product-image-single img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important;
+  object-position: center !important;
+  transform: none !important;
+}
+.product-modal .shop-thumbnails { margin-top: 8px; gap: 6px; }
+.product-modal .shop-thumbnails img { object-fit: contain; }
+@media (max-width: 600px) {
+  .product-modal .shop-dialog { max-height: calc(100dvh - 16px); }
+  .product-modal .shop-dialog-heading { padding: 10px 14px; }
+  .product-modal .shop-detail { padding: 10px; gap: 10px; }
+  .product-modal .shop-detail-info { padding: 0 4px; }
+  .product-modal .shop-detail-info h3 { margin: 7px 0 9px; font-size: 22px; }
+  .product-modal .detail-size { margin-top: 12px; padding-bottom: 9px; }
+  .product-modal .detail-stock { margin-top: 9px; }
+  .product-modal .detail-quantity { margin: 12px 0; }
+  .product-modal .detail-actions-group { margin-top: 10px !important; gap: 8px !important; }
+  .product-modal .shop-detail-info > small { margin-top: 10px; }
+}
+
 .modal-heart {
   position: absolute !important;
   top: 5px !important;
